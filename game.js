@@ -1,559 +1,597 @@
-/* ==========================================================================
-   LAST BEAT - Complete Game Engine
-   Sop Game Jam Entry - Critical Point Theme
-   ========================================================================== */
-
 (function () {
     'use strict';
 
-    // ==========================================================================
-    // 1. GAME CONSTANTS & STATE MANAGEMENT
-    // ==========================================================================
     const STATE = {
         INIT: 0,
-        AUDIO_UNLOCK: 1,
+        AUDIO_INIT: 1,
         LOADING: 2,
         DEVICE_SELECT: 3,
-        INTRO_CUTSCENE: 4,
-        PLAYING: 5,
-        DIALOGUE: 6,
-        CRITICAL_POINT: 7,
-        GAME_OVER: 8,
-        ENDING: 9
+        PLAYING: 4,
+        DIALOGUE: 5,
+        CRITICAL: 6,
+        ENDING: 7
     };
 
     const CONFIG = {
-        CANVAS_WIDTH: 960,
-        CANVAS_HEIGHT: 540,
-        GRAVITY: 0.45,
-        WALK_SPEED: 2.2,
-        RUN_SPEED: 4.2,
-        ADRENALINE_SPEED: 5.8,
         MAX_STABILITY: 100,
-        CRITICAL_THRESHOLD_1: 20,
-        CRITICAL_THRESHOLD_2: 15,
-        FATAL_THRESHOLD: 5,
-        WORLD_WIDTH: 4800
+        CRITICAL_1: 20,
+        CRITICAL_2: 15,
+        FATAL: 5,
+        WALK_SPEED: 0.12,
+        RUN_SPEED: 0.22,
+        ADRENALINE_SPEED: 0.32,
+        WORLD_LENGTH: 250
     };
 
     const game = {
-        currentState: STATE.INIT,
+        state: STATE.INIT,
         selectedDevice: 'computer',
-        
-        // البيانات الحيوية للاعب
         heartStability: 100,
         bpm: 72,
         isRunning: false,
         isCritical: false,
-        isAdrenalineActive: false,
-        timeSurvived: 0,
-        minStabilityReached: 100,
-        maxBpmReached: 72,
-        
-        // نظام الكاميرا والمؤثرات
-        cameraX: 0,
-        targetCameraX: 0,
-        screenShake: { intensity: 0, duration: 0 },
-        
-        // أحداث القصة
-        currentZone: 0,
-        blackoutOccurred: false,
-        radioMessageReceived: false,
+        isAdrenaline: false,
+        blackout: false,
         hallucinationActive: false,
         reactorReached: false,
-        
-        // المراجع البرمجية لـ DOM
+        cameraShake: 0,
+        maxBpm: 72,
+        minStability: 100,
         dom: {},
-        ctx: null,
-        lightCtx: null,
-        particleCtx: null,
-        hudEcgCtx: null,
-        endingEcgCtx: null,
-        dialogueAvatarCtx: null
+        hudEcgCtx: null
     };
 
-    // ==========================================================================
-    // 2. WEB AUDIO API SYNTHESIZER ENGINE (محرك الصوت التخليقي)
-    // ==========================================================================
-    class SoundEngine {
+    class AudioEngine {
         constructor() {
             this.ctx = null;
-            this.isUnlocked = false;
+            this.unlocked = false;
             this.masterGain = null;
-            this.heartGain = null;
-            this.ambientGain = null;
-            this.sfxGain = null;
-            
-            this.heartbeatTimer = null;
             this.tinnitusNode = null;
-            this.droneOscillator = null;
+            this.droneNode = null;
         }
 
         init() {
             try {
-                const AudioCtx = window.AudioContext || window.webkitAudioContext;
-                this.ctx = new AudioCtx();
-                
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                this.ctx = new AudioContext();
                 this.masterGain = this.ctx.createGain();
-                this.heartGain = this.ctx.createGain();
-                this.ambientGain = this.ctx.createGain();
-                this.sfxGain = this.ctx.createGain();
-
-                this.masterGain.gain.setValueAtTime(0.9, this.ctx.currentTime);
-                this.heartGain.gain.setValueAtTime(1.0, this.ctx.currentTime);
-                this.ambientGain.gain.setValueAtTime(0.4, this.ctx.currentTime);
-                this.sfxGain.gain.setValueAtTime(0.7, this.ctx.currentTime);
-
-                this.heartGain.connect(this.masterGain);
-                this.ambientGain.connect(this.masterGain);
-                this.sfxGain.connect(this.masterGain);
+                this.masterGain.gain.setValueAtTime(0.85, this.ctx.currentTime);
                 this.masterGain.connect(this.ctx.destination);
-
-                this.isUnlocked = true;
-                this.startAmbientDrone();
+                this.unlocked = true;
+                this.startAmbient();
                 return true;
             } catch (e) {
                 return false;
             }
         }
 
-        // تخليق صوت نبض القلب البرمجي (Boom... Boom...)
-        triggerHeartbeat(intensity = 1.0) {
-            if (!this.isUnlocked || !this.ctx) return;
-
+        playHeartbeat(intensity) {
+            if (!this.unlocked || !this.ctx) return;
             const now = this.ctx.currentTime;
             
-            // النبضة الأولى (Lub)
             const osc1 = this.ctx.createOscillator();
-            const gain1 = this.ctx.createGain();
-            const filter1 = this.ctx.createBiquadFilter();
+            const g1 = this.ctx.createGain();
+            const f1 = this.ctx.createBiquadFilter();
 
             osc1.type = 'sine';
-            osc1.frequency.setValueAtTime(60, now);
-            osc1.frequency.exponentialRampToValueAtTime(20, now + 0.12);
+            osc1.frequency.setValueAtTime(55, now);
+            osc1.frequency.exponentialRampToValueAtTime(18, now + 0.12);
 
-            filter1.type = 'lowpass';
-            filter1.frequency.setValueAtTime(120, now);
+            f1.type = 'lowpass';
+            f1.frequency.setValueAtTime(110, now);
 
-            gain1.gain.setValueAtTime(0, now);
-            gain1.gain.linearRampToValueAtTime(1.2 * intensity, now + 0.02);
-            gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+            g1.gain.setValueAtTime(0, now);
+            g1.gain.linearRampToValueAtTime(1.3 * intensity, now + 0.02);
+            g1.gain.exponentialRampToValueAtTime(0.001, now + 0.14);
 
-            osc1.connect(filter1);
-            filter1.connect(gain1);
-            gain1.connect(this.heartGain);
+            osc1.connect(f1);
+            f1.connect(g1);
+            g1.connect(this.masterGain);
 
             osc1.start(now);
-            osc1.stop(now + 0.16);
+            osc1.stop(now + 0.15);
 
-            // النبضة الثانية (Dub)
+            const delay2 = now + 0.11;
             const osc2 = this.ctx.createOscillator();
-            const gain2 = this.ctx.createGain();
-            const filter2 = this.ctx.createBiquadFilter();
-
-            const delay2 = now + 0.12;
+            const g2 = this.ctx.createGain();
+            const f2 = this.ctx.createBiquadFilter();
 
             osc2.type = 'sine';
-            osc2.frequency.setValueAtTime(75, delay2);
-            osc2.frequency.exponentialRampToValueAtTime(25, delay2 + 0.1);
+            osc2.frequency.setValueAtTime(70, delay2);
+            osc2.frequency.exponentialRampToValueAtTime(22, delay2 + 0.1);
 
-            filter2.type = 'lowpass';
-            filter2.frequency.setValueAtTime(140, delay2);
+            f2.type = 'lowpass';
+            f2.frequency.setValueAtTime(130, delay2);
 
-            gain2.gain.setValueAtTime(0, delay2);
-            gain2.gain.linearRampToValueAtTime(0.9 * intensity, delay2 + 0.02);
-            gain2.gain.exponentialRampToValueAtTime(0.001, delay2 + 0.12);
+            g2.gain.setValueAtTime(0, delay2);
+            g2.gain.linearRampToValueAtTime(0.9 * intensity, delay2 + 0.02);
+            g2.gain.exponentialRampToValueAtTime(0.001, delay2 + 0.12);
 
-            osc2.connect(filter2);
-            filter2.connect(gain2);
-            gain2.connect(this.heartGain);
+            osc2.connect(f2);
+            f2.connect(g2);
+            g2.connect(this.masterGain);
 
             osc2.start(delay2);
-            osc2.stop(delay2 + 0.14);
+            osc2.stop(delay2 + 0.13);
         }
 
-        // صوت النفير والصفير عند النقطة الحرجة (Tinnitus)
         startTinnitus() {
-            if (!this.isUnlocked || this.tinnitusNode) return;
-
+            if (!this.unlocked || this.tinnitusNode) return;
             const now = this.ctx.currentTime;
             this.tinnitusNode = this.ctx.createOscillator();
             const gain = this.ctx.createGain();
 
             this.tinnitusNode.type = 'sine';
-            this.tinnitusNode.frequency.setValueAtTime(3800, now);
+            this.tinnitusNode.frequency.setValueAtTime(3600, now);
 
             gain.gain.setValueAtTime(0, now);
-            gain.gain.linearRampToValueAtTime(0.12, now + 1.5);
+            gain.gain.linearRampToValueAtTime(0.12, now + 1.2);
 
             this.tinnitusNode.connect(gain);
             gain.connect(this.masterGain);
 
             this.tinnitusNode.start(now);
-            this.tinnitusNode.gainNode = gain;
+            this.tinnitusNode.gainRef = gain;
         }
 
         stopTinnitus() {
             if (this.tinnitusNode) {
                 const now = this.ctx.currentTime;
-                this.tinnitusNode.gainNode.gain.linearRampToValueAtTime(0.001, now + 0.5);
+                this.tinnitusNode.gainRef.gain.linearRampToValueAtTime(0.001, now + 0.4);
                 setTimeout(() => {
                     if (this.tinnitusNode) {
                         this.tinnitusNode.stop();
                         this.tinnitusNode = null;
                     }
-                }, 500);
+                }, 400);
             }
         }
 
-        // توليد الأصوات المحيطية للمستشفى
-        startAmbientDrone() {
-            if (!this.isUnlocked) return;
-
+        startAmbient() {
+            if (!this.unlocked) return;
             const now = this.ctx.currentTime;
-            this.droneOscillator = this.ctx.createOscillator();
+            this.droneNode = this.ctx.createOscillator();
             const gain = this.ctx.createGain();
             const filter = this.ctx.createBiquadFilter();
 
-            this.droneOscillator.type = 'sawtooth';
-            this.droneOscillator.frequency.setValueAtTime(45, now);
+            this.droneNode.type = 'sawtooth';
+            this.droneNode.frequency.setValueAtTime(40, now);
 
             filter.type = 'lowpass';
-            filter.frequency.setValueAtTime(90, now);
+            filter.frequency.setValueAtTime(80, now);
 
-            gain.gain.setValueAtTime(0.15, now);
+            gain.gain.setValueAtTime(0.1, now);
 
-            this.droneOscillator.connect(filter);
+            this.droneNode.connect(filter);
             filter.connect(gain);
-            gain.connect(this.ambientGain);
+            gain.connect(this.masterGain);
 
-            this.droneOscillator.start(now);
+            this.droneNode.start(now);
         }
 
-        // توليد أصوات الشرر والكهرباء عند انقطاع التيار
-        playElectricSpark() {
-            if (!this.isUnlocked) return;
-
-            const bufferSize = this.ctx.sampleRate * 0.1;
-            const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+        playSpark() {
+            if (!this.unlocked) return;
+            const bufSize = this.ctx.sampleRate * 0.08;
+            const buffer = this.ctx.createBuffer(1, bufSize, this.ctx.sampleRate);
             const data = buffer.getChannelData(0);
-
-            for (let i = 0; i < bufferSize; i++) {
+            for (let i = 0; i < bufSize; i++) {
                 data[i] = Math.random() * 2 - 1;
             }
-
             const noise = this.ctx.createBufferSource();
             noise.buffer = buffer;
-
             const filter = this.ctx.createBiquadFilter();
             filter.type = 'bandpass';
-            filter.frequency.setValueAtTime(2500, this.ctx.currentTime);
-
+            filter.frequency.setValueAtTime(2200, this.ctx.currentTime);
             const gain = this.ctx.createGain();
-            gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.09);
+            gain.gain.setValueAtTime(0.25, this.ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.07);
 
             noise.connect(filter);
             filter.connect(gain);
-            gain.connect(this.sfxGain);
-
+            gain.connect(this.masterGain);
             noise.start();
         }
 
-        // صوت الخطوات البرمجي
         playFootstep() {
-            if (!this.isUnlocked) return;
-
+            if (!this.unlocked) return;
             const now = this.ctx.currentTime;
             const osc = this.ctx.createOscillator();
             const gain = this.ctx.createGain();
 
             osc.type = 'triangle';
-            osc.frequency.setValueAtTime(120, now);
-            osc.frequency.exponentialRampToValueAtTime(30, now + 0.05);
+            osc.frequency.setValueAtTime(100, now);
+            osc.frequency.exponentialRampToValueAtTime(25, now + 0.04);
 
-            gain.gain.setValueAtTime(0.2, now);
-            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
+            gain.gain.setValueAtTime(0.18, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.04);
 
             osc.connect(gain);
-            gain.connect(this.sfxGain);
+            gain.connect(this.masterGain);
 
             osc.start(now);
-            osc.stop(now + 0.06);
-        }
-
-        // صوت جهاز اللاسلكي التشويشي
-        playRadioStatic() {
-            if (!this.isUnlocked) return;
-
-            const bufferSize = this.ctx.sampleRate * 0.4;
-            const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
-            const data = buffer.getChannelData(0);
-
-            for (let i = 0; i < bufferSize; i++) {
-                data[i] = (Math.random() * 2 - 1) * 0.15;
-            }
-
-            const noise = this.ctx.createBufferSource();
-            noise.buffer = buffer;
-            noise.connect(this.sfxGain);
-            noise.start();
+            osc.stop(now + 0.05);
         }
     }
 
-    const audio = new SoundEngine();
+    const audio = new AudioEngine();
 
-    // ==========================================================================
-    // 3. PLAYER & PHYSICS SYSTEM (نظام اللاعب والحركة)
-    // ==========================================================================
-    class Player {
+    class World3D {
         constructor() {
-            this.x = 180;
-            this.y = 380;
-            this.width = 32;
-            this.height = 64;
-            this.vx = 0;
-            this.vy = 0;
-            this.facingRight = true;
-            this.isGrounded = true;
-            this.frame = 0;
-            this.frameTimer = 0;
-            this.state = 'idle'; // idle, walk, run, faint
+            this.scene = new THREE.Scene();
+            this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+            
+            this.lights = [];
+            this.hallucinationMesh = null;
+            this.bobTimer = 0;
+
+            this.init();
         }
 
-        update(keys, touchState) {
-            let moveLeft = keys.left || touchState.left;
-            let moveRight = keys.right || touchState.right;
-            let runKey = keys.run || touchState.run;
+        init() {
+            this.renderer.setSize(window.innerWidth, window.innerHeight);
+            this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            this.renderer.shadowMap.enabled = true;
+            this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
-            let currentSpeed = CONFIG.WALK_SPEED;
+            document.getElementById('threeCanvasContainer').appendChild(this.renderer.domElement);
 
-            // تطبيق سرعة الادرينالين عند النقطة الحرجة 15%
-            if (game.isAdrenalineActive) {
-                currentSpeed = CONFIG.ADRENALINE_SPEED;
-            } else if (runKey && game.heartStability > CONFIG.CRITICAL_THRESHOLD_1) {
-                currentSpeed = CONFIG.RUN_SPEED;
+            this.scene.background = new THREE.Color(0x020304);
+            this.scene.fog = new THREE.FogExp2(0x020304, 0.045);
+
+            this.camera.position.set(0, 1.6, 0);
+
+            this.buildHospitalCorridor();
+
+            window.addEventListener('resize', () => {
+                this.camera.aspect = window.innerWidth / window.innerHeight;
+                this.camera.updateProjectionMatrix();
+                this.renderer.setSize(window.innerWidth, window.innerHeight);
+            });
+        }
+
+        buildHospitalCorridor() {
+            const wallMat = new THREE.MeshStandardMaterial({ color: 0x1a222d, roughness: 0.8 });
+            const floorMat = new THREE.MeshStandardMaterial({ color: 0x0a0e14, roughness: 0.4, metalness: 0.2 });
+            const ceilingMat = new THREE.MeshStandardMaterial({ color: 0x0d1117, roughness: 0.9 });
+            const doorMat = new THREE.MeshStandardMaterial({ color: 0x2d3748, roughness: 0.5 });
+
+            const floorGeo = new THREE.PlaneGeometry(6, CONFIG.WORLD_LENGTH);
+            const floor = new THREE.Mesh(floorGeo, floorMat);
+            floor.rotation.x = -Math.PI / 2;
+            floor.position.set(0, 0, -CONFIG.WORLD_LENGTH / 2);
+            floor.receiveShadow = true;
+            this.scene.add(floor);
+
+            const ceiling = new THREE.Mesh(floorGeo, ceilingMat);
+            ceiling.rotation.x = Math.PI / 2;
+            ceiling.position.set(0, 3, -CONFIG.WORLD_LENGTH / 2);
+            this.scene.add(ceiling);
+
+            const wallGeo = new THREE.PlaneGeometry(CONFIG.WORLD_LENGTH, 3);
+
+            const leftWall = new THREE.Mesh(wallGeo, wallMat);
+            leftWall.rotation.y = Math.PI / 2;
+            leftWall.position.set(-3, 1.5, -CONFIG.WORLD_LENGTH / 2);
+            this.scene.add(leftWall);
+
+            const rightWall = new THREE.Mesh(wallGeo, wallMat);
+            rightWall.rotation.y = -Math.PI / 2;
+            rightWall.position.set(3, 1.5, -CONFIG.WORLD_LENGTH / 2);
+            this.scene.add(rightWall);
+
+            for (let z = -10; z > -CONFIG.WORLD_LENGTH + 20; z -= 15) {
+                const doorGeo = new THREE.BoxGeometry(0.1, 2.2, 1.2);
+                const leftDoor = new THREE.Mesh(doorGeo, doorMat);
+                leftDoor.position.set(-2.95, 1.1, z);
+                this.scene.add(leftDoor);
+
+                const rightDoor = new THREE.Mesh(doorGeo, doorMat);
+                rightDoor.position.set(2.95, 1.1, z);
+                this.scene.add(rightDoor);
+
+                const light = new THREE.PointLight(0x00ff66, 0.8, 12);
+                light.position.set(0, 2.8, z);
+                this.scene.add(light);
+                this.lights.push(light);
+
+                const fixtureGeo = new THREE.BoxGeometry(1.5, 0.1, 0.3);
+                const fixtureMat = new THREE.MeshBasicMaterial({ color: 0x88ffbb });
+                const fixture = new THREE.Mesh(fixtureGeo, fixtureMat);
+                fixture.position.set(0, 2.95, z);
+                this.scene.add(fixture);
+            }
+
+            const shadowGeo = new THREE.BoxGeometry(0.8, 1.8, 0.3);
+            const shadowMat = new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0 });
+            this.hallucinationMesh = new THREE.Mesh(shadowGeo, shadowMat);
+            this.hallucinationMesh.position.set(0, 0.9, -100);
+            this.scene.add(this.hallucinationMesh);
+        }
+
+        triggerBlackout() {
+            this.lights.forEach(light => {
+                light.color.setHex(0xff1e43);
+                light.intensity = 0.15;
+            });
+            this.scene.fog.color.setHex(0x010102);
+            this.scene.background.setHex(0x010102);
+        }
+
+        update(playerPos, isMoving) {
+            this.camera.position.x = playerPos.x;
+            this.camera.position.z = playerPos.z;
+
+            if (isMoving) {
+                this.bobTimer += game.isRunning ? 0.25 : 0.15;
+                this.camera.position.y = 1.6 + Math.sin(this.bobTimer) * 0.05;
+            } else {
+                this.camera.position.y = 1.6;
+            }
+
+            if (game.cameraShake > 0) {
+                this.camera.position.x += (Math.random() - 0.5) * game.cameraShake;
+                this.camera.position.y += (Math.random() - 0.5) * game.cameraShake;
+                game.cameraShake *= 0.9;
+            }
+
+            if (game.hallucinationActive && this.hallucinationMesh) {
+                const dist = Math.abs(playerPos.z - this.hallucinationMesh.position.z);
+                if (dist < 20 && dist > 2) {
+                    this.hallucinationMesh.material.opacity = Math.min(0.9, (20 - dist) / 10);
+                } else {
+                    this.hallucinationMesh.material.opacity = 0;
+                }
+            }
+
+            this.renderer.render(this.scene, this.camera);
+        }
+    }
+
+    class FirstPersonController {
+        constructor(camera) {
+            this.camera = camera;
+            this.position = new THREE.Vector3(0, 1.6, 0);
+            this.rotation = new THREE.Euler(0, 0, 0, 'YXZ');
+
+            this.moveForward = false;
+            this.moveBackward = false;
+            this.moveLeft = false;
+            this.moveRight = false;
+            this.runKey = false;
+
+            this.touchMoveVector = { x: 0, y: 0 };
+            this.touchLookVector = { x: 0, y: 0 };
+
+            this.isPointerLocked = false;
+            this.stepTimer = 0;
+
+            this.initListeners();
+        }
+
+        initListeners() {
+            window.addEventListener('keydown', (e) => {
+                if (e.code === 'KeyW' || e.code === 'ArrowUp') this.moveForward = true;
+                if (e.code === 'KeyS' || e.code === 'ArrowDown') this.moveBackward = true;
+                if (e.code === 'KeyA' || e.code === 'ArrowLeft') this.moveLeft = true;
+                if (e.code === 'KeyD' || e.code === 'ArrowRight') this.moveRight = true;
+                if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') this.runKey = true;
+                if (e.code === 'Space' && game.state === STATE.DIALOGUE) dialogueEngine.next();
+            });
+
+            window.addEventListener('keyup', (e) => {
+                if (e.code === 'KeyW' || e.code === 'ArrowUp') this.moveForward = false;
+                if (e.code === 'KeyS' || e.code === 'ArrowDown') this.moveBackward = false;
+                if (e.code === 'KeyA' || e.code === 'ArrowLeft') this.moveLeft = false;
+                if (e.code === 'KeyD' || e.code === 'ArrowRight') this.moveRight = false;
+                if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') this.runKey = false;
+            });
+
+            const viewport = document.getElementById('gameViewport');
+            viewport.addEventListener('click', () => {
+                if (game.selectedDevice === 'computer' && !this.isPointerLocked) {
+                    viewport.requestPointerLock();
+                }
+            });
+
+            document.addEventListener('pointerlockchange', () => {
+                this.isPointerLocked = (document.pointerLockElement === viewport);
+            });
+
+            document.addEventListener('mousemove', (e) => {
+                if (!this.isPointerLocked) return;
+                this.rotation.y -= e.movementX * 0.0022;
+                this.rotation.x -= e.movementY * 0.0022;
+                this.rotation.x = Math.max(-Math.PI / 2.5, Math.min(Math.PI / 2.5, this.rotation.x));
+                this.camera.quaternion.setFromEuler(this.rotation);
+            });
+
+            this.initTouchControls();
+        }
+
+        initTouchControls() {
+            const moveZone = document.getElementById('touchMoveZone');
+            const lookZone = document.getElementById('touchLookZone');
+            const knob = document.getElementById('joystickKnob');
+
+            let moveTouchId = null;
+            let lookTouchId = null;
+            let startX = 0, startY = 0;
+            let lastLookX = 0, lastLookY = 0;
+
+            moveZone.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                const touch = e.changedTouches[0];
+                moveTouchId = touch.identifier;
+                startX = touch.clientX;
+                startY = touch.clientY;
+                knob.style.display = 'block';
+                knob.style.left = `${startX}px`;
+                knob.style.top = `${startY}px`;
+            });
+
+            moveZone.addEventListener('touchmove', (e) => {
+                e.preventDefault();
+                for (let touch of e.changedTouches) {
+                    if (touch.identifier === moveTouchId) {
+                        const dx = touch.clientX - startX;
+                        const dy = touch.clientY - startY;
+                        const dist = Math.min(40, Math.hypot(dx, dy));
+                        const angle = Math.atan2(dy, dx);
+
+                        this.touchMoveVector.x = (Math.cos(angle) * dist) / 40;
+                        this.touchMoveVector.y = (Math.sin(angle) * dist) / 40;
+
+                        knob.style.transform = `translate(-50%, -50%) translate(${Math.cos(angle) * dist}px, ${Math.sin(angle) * dist}px)`;
+                    }
+                }
+            });
+
+            const endMove = (e) => {
+                for (let touch of e.changedTouches) {
+                    if (touch.identifier === moveTouchId) {
+                        moveTouchId = null;
+                        this.touchMoveVector = { x: 0, y: 0 };
+                        knob.style.display = 'none';
+                    }
+                }
+            };
+
+            moveZone.addEventListener('touchend', endMove);
+            moveZone.addEventListener('touchcancel', endMove);
+
+            lookZone.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                const touch = e.changedTouches[0];
+                lookTouchId = touch.identifier;
+                lastLookX = touch.clientX;
+                lastLookY = touch.clientY;
+                if (game.state === STATE.DIALOGUE) dialogueEngine.next();
+            });
+
+            lookZone.addEventListener('touchmove', (e) => {
+                e.preventDefault();
+                for (let touch of e.changedTouches) {
+                    if (touch.identifier === lookTouchId) {
+                        const dx = touch.clientX - lastLookX;
+                        const dy = touch.clientY - lastLookY;
+
+                        this.rotation.y -= dx * 0.004;
+                        this.rotation.x -= dy * 0.004;
+                        this.rotation.x = Math.max(-Math.PI / 2.5, Math.min(Math.PI / 2.5, this.rotation.x));
+                        this.camera.quaternion.setFromEuler(this.rotation);
+
+                        lastLookX = touch.clientX;
+                        lastLookY = touch.clientY;
+                    }
+                }
+            });
+
+            const endLook = (e) => {
+                for (let touch of e.changedTouches) {
+                    if (touch.identifier === lookTouchId) {
+                        lookTouchId = null;
+                    }
+                }
+            };
+
+            lookZone.addEventListener('touchend', endLook);
+            lookZone.addEventListener('touchcancel', endLook);
+
+            document.getElementById('btnTouchRun').addEventListener('touchstart', () => this.runKey = true);
+            document.getElementById('btnTouchRun').addEventListener('touchend', () => this.runKey = false);
+        }
+
+        update() {
+            let speed = CONFIG.WALK_SPEED;
+
+            if (game.isAdrenaline) {
+                speed = CONFIG.ADRENALINE_SPEED;
+            } else if (this.runKey && game.heartStability > CONFIG.CRITICAL_1) {
+                speed = CONFIG.RUN_SPEED;
                 game.isRunning = true;
             } else {
                 game.isRunning = false;
             }
 
-            if (moveLeft) {
-                this.vx = -currentSpeed;
-                this.facingRight = false;
-                this.state = game.isRunning ? 'run' : 'walk';
-            } else if (moveRight) {
-                this.vx = currentSpeed;
-                this.facingRight = true;
-                this.state = game.isRunning ? 'run' : 'walk';
-            } else {
-                this.vx = 0;
-                this.state = 'idle';
+            const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(this.camera.quaternion);
+            forward.y = 0;
+            forward.normalize();
+
+            const side = new THREE.Vector3(1, 0, 0).applyQuaternion(this.camera.quaternion);
+            side.y = 0;
+            side.normalize();
+
+            let isMoving = false;
+
+            if (this.moveForward || this.touchMoveVector.y < -0.2) {
+                this.position.addScaledVector(forward, speed);
+                isMoving = true;
+            }
+            if (this.moveBackward || this.touchMoveVector.y > 0.2) {
+                this.position.addScaledVector(forward, -speed);
+                isMoving = true;
+            }
+            if (this.moveLeft || this.touchMoveVector.x < -0.2) {
+                this.position.addScaledVector(side, -speed * 0.7);
+                isMoving = true;
+            }
+            if (this.moveRight || this.touchMoveVector.x > 0.2) {
+                this.position.addScaledVector(side, speed * 0.7);
+                isMoving = true;
             }
 
-            // تحديث موقع اللاعب
-            this.x += this.vx;
+            this.position.x = Math.max(-2.2, Math.min(2.2, this.position.x));
+            if (this.position.z > 0) this.position.z = 0;
 
-            // تقييد الحدود العالمية
-            if (this.x < 50) this.x = 50;
-            if (this.x > CONFIG.WORLD_WIDTH - 100) this.x = CONFIG.WORLD_WIDTH - 100;
-
-            // تحديث إطارات الحركة
-            this.frameTimer++;
-            if (this.frameTimer > (this.state === 'run' ? 6 : 12)) {
-                this.frame = (this.frame + 1) % 4;
-                this.frameTimer = 0;
-
-                if (this.state === 'walk' || this.state === 'run') {
+            if (isMoving) {
+                this.stepTimer++;
+                if (this.stepTimer > (game.isRunning ? 12 : 22)) {
                     audio.playFootstep();
+                    this.stepTimer = 0;
                 }
             }
-        }
 
-        draw(ctx) {
-            ctx.save();
-            ctx.translate(this.x - game.cameraX, this.y);
-
-            if (!this.facingRight) {
-                ctx.scale(-1, 1);
-                ctx.translate(-this.width, 0);
-            }
-
-            // رسم شخصية البطل بأسلوب Pixel Art
-            // الجسم/ثوب المستشفى
-            ctx.fillStyle = '#1e2d3b';
-            ctx.fillRect(8, 20, 16, 32);
-
-            // الرأس والوجه
-            ctx.fillStyle = '#d1a384';
-            ctx.fillRect(8, 4, 16, 16);
-
-            // الشعر
-            ctx.fillStyle = '#221811';
-            ctx.fillRect(6, 2, 20, 6);
-
-            // العينان
-            ctx.fillStyle = '#000000';
-            ctx.fillRect(18, 9, 2, 3);
-
-            // جهاز قياس نبض القلب المربوط بصدره
-            ctx.fillStyle = game.isCritical ? '#ff1e43' : '#00ff66';
-            ctx.fillRect(12, 26, 4, 4);
-
-            // الأرجُل بأسلوب الحركة
-            ctx.fillStyle = '#111822';
-            if (this.state === 'walk' || this.state === 'run') {
-                const legOffset = Math.sin(this.frame * Math.PI / 2) * 6;
-                ctx.fillRect(8, 52, 6, 12 + legOffset);
-                ctx.fillRect(18, 52, 6, 12 - legOffset);
-            } else {
-                ctx.fillRect(8, 52, 6, 12);
-                ctx.fillRect(18, 52, 6, 12);
-            }
-
-            ctx.restore();
+            return isMoving;
         }
     }
 
-    // ==========================================================================
-    // 4. PROCEDURAL CANVAS RENDER ENGINE (محرك الرسم والتظليل)
-    // ==========================================================================
-    class RenderEngine {
-        constructor() {
-            this.particles = [];
-        }
-
-        drawEnvironment(ctx) {
-            // خلفية المستشفى والأسقف
-            ctx.fillStyle = '#05070a';
-            ctx.fillRect(0, 0, CONFIG.CANVAS_WIDTH, CONFIG.CANVAS_HEIGHT);
-
-            const startTile = Math.floor(game.cameraX / 120);
-            const endTile = startTile + Math.ceil(CONFIG.CANVAS_WIDTH / 120) + 1;
-
-            // رسم بلاط الممرات والأبواب المجهدة
-            for (let i = startTile; i < endTile; i++) {
-                const worldX = i * 120 - game.cameraX;
-
-                // الأرضية
-                ctx.fillStyle = (i % 2 === 0) ? '#0c1017' : '#080b10';
-                ctx.fillRect(worldX, 440, 120, 100);
-
-                ctx.strokeStyle = '#151c28';
-                ctx.lineWidth = 1;
-                ctx.strokeRect(worldX, 440, 120, 100);
-
-                // الجدران والأبواب
-                ctx.fillStyle = '#0a0d14';
-                ctx.fillRect(worldX, 100, 118, 340);
-
-                // أجهزة ومعدات الطوارئ معلقة على الجدران
-                if (i % 3 === 0) {
-                    ctx.fillStyle = '#18202c';
-                    ctx.fillRect(worldX + 20, 240, 40, 100);
-                    ctx.fillStyle = game.blackoutOccurred ? '#330000' : '#00aa44';
-                    ctx.fillRect(worldX + 35, 250, 10, 6);
-                }
-
-                // رسم مصابيح السقف المكسورة
-                ctx.fillStyle = '#1c2533';
-                ctx.fillRect(worldX + 40, 90, 40, 10);
-            }
-        }
-
-        // إضاءة حركية وديناميكية الظلام (Lighting Overlay System)
-        drawLighting(ctx) {
-            ctx.clearRect(0, 0, CONFIG.CANVAS_WIDTH, CONFIG.CANVAS_HEIGHT);
-
-            if (!game.blackoutOccurred) {
-                ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
-                ctx.fillRect(0, 0, CONFIG.CANVAS_WIDTH, CONFIG.CANVAS_HEIGHT);
-                return;
-            }
-
-            // ظلام تام بعد انقطاع الكهرباء
-            ctx.fillStyle = 'rgba(2, 3, 5, 0.96)';
-            ctx.fillRect(0, 0, CONFIG.CANVAS_WIDTH, CONFIG.CANVAS_HEIGHT);
-
-            // ضوء الضرر والتألق من جهاز صدر اللاعب
-            const playerScreenX = player.x - game.cameraX + 16;
-            const playerScreenY = player.y + 30;
-
-            const gradient = ctx.createRadialGradient(
-                playerScreenX, playerScreenY, 10,
-                playerScreenX, playerScreenY, game.isCritical ? 140 : 220
-            );
-
-            const lightColor = game.isCritical ? 'rgba(255, 30, 67, ' : 'rgba(0, 255, 102, ';
-            gradient.addColorStop(0, lightColor + '0.8)');
-            gradient.addColorStop(0.5, lightColor + '0.2)');
-            gradient.addColorStop(1, 'transparent');
-
-            ctx.globalCompositeOperation = 'destination-out';
-            ctx.fillStyle = gradient;
-            ctx.beginPath();
-            ctx.arc(playerScreenX, playerScreenY, 220, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.globalCompositeOperation = 'source-over';
-        }
-
-        // رسم الهلوسات عند الانخفاض الحاد لاستقرار القلب
-        drawHallucinations(ctx) {
-            if (!game.hallucinationActive) return;
-
-            const shadowX = player.x + 300 - game.cameraX;
-            ctx.save();
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.85)';
-            ctx.shadowColor = '#ff1e43';
-            ctx.shadowBlur = 15;
-
-            // رسم ظل لشخصية الطبيب أو نسخة من اللاعب يختفي فجأة
-            ctx.fillRect(shadowX, 370, 30, 70);
-            ctx.restore();
-        }
-    }
-
-    // ==========================================================================
-    // 5. DIALOGUE & STORY SCRIPT ENGINE (نظام القصة والحوارات)
-    // ==========================================================================
-    const STORY_SCRIPT = {
+    const STORY = {
         0: [
-            { speaker: 'DOCTOR', text: 'العملية انتهت بنجاح... هل تسمعني؟' },
-            { speaker: 'DOCTOR', text: 'حاول ألا تتحرك كثيراً... قلبك الذكي الجديد غير مستقر بعد.' }
+            { speaker: 'DOCTOR', text: 'العملية انتهت...' },
+            { speaker: 'DOCTOR', text: 'هل تسمعني؟ لا تركض كثيراً... قلبك لم يعد طبيعياً.' }
         ],
         1: [
-            { speaker: 'RADIO', text: 'تحذير شدييد! المفاعل الرئيسي للمستشفى في حالة انهيار حرارري!' },
-            { speaker: 'RADIO', text: 'إذا كنت تسمعني... لا تتوقف! قلبك الذكي مرتبط بالمفاعل... توقفه يعني انهيار كل شيء!' }
+            { speaker: 'RADIO', text: 'تحذير! المفاعل في حالة انهيار!' },
+            { speaker: 'RADIO', text: 'إذا كنت تسمعني... لا تتوقف! قلبك مرتبط بالمفاعل الرئيسي.' }
         ],
         2: [
-            { speaker: 'PLAYER', text: 'لماذا أصبحت المستشفى فارغة وفجائية بالكامل...؟' }
+            { speaker: 'PLAYER', text: 'لماذا أصبحت المستشفى فارغة؟' }
         ],
         3: [
-            { speaker: 'PLAYER', text: 'هل رأيته هناك...؟ لا... هذا مستحيل نفسياً!' }
+            { speaker: 'PLAYER', text: 'هل رأيته؟ ... لا ... هذا مستحيل.' }
         ],
         CRITICAL_20: [
-            { speaker: 'PLAYER', text: 'لا... ليس الآن... النبض يخرج عن السيطرة!' }
+            { speaker: 'PLAYER', text: 'لا... ليس الآن...' }
         ],
         CRITICAL_10: [
-            { speaker: 'PLAYER', text: 'أرجوك... اصمد لثوانٍ معدودة فقط...' }
+            { speaker: 'PLAYER', text: 'أرجوك... اصمد...' }
         ]
     };
 
-    class DialogueSystem {
+    class DialogueEngine {
         constructor() {
             this.queue = [];
-            this.currentLine = null;
-            this.textIndex = 0;
-            this.typingTimer = null;
-            this.isTyping = false;
+            this.timer = null;
+            this.index = 0;
+            this.current = null;
         }
 
-        startSequence(scriptKey) {
-            const lines = STORY_SCRIPT[scriptKey];
+        start(key) {
+            const lines = STORY[key];
             if (!lines) return;
-
             this.queue = [...lines];
-            game.currentState = STATE.DIALOGUE;
+            game.state = STATE.DIALOGUE;
             game.dom.dialogueBox.classList.remove('hidden');
             this.next();
         }
@@ -561,319 +599,222 @@
         next() {
             if (this.queue.length === 0) {
                 game.dom.dialogueBox.classList.add('hidden');
-                game.currentState = STATE.PLAYING;
+                game.state = STATE.PLAYING;
                 return;
             }
 
-            this.currentLine = this.queue.shift();
-            game.dom.dialogueSpeaker.textContent = this.currentLine.speaker;
+            this.current = this.queue.shift();
+            game.dom.dialogueSpeaker.textContent = this.current.speaker;
             game.dom.dialogueText.textContent = '';
-            this.textIndex = 0;
-            this.isTyping = true;
+            this.index = 0;
 
-            clearInterval(this.typingTimer);
-            this.typingTimer = setInterval(() => {
-                if (this.textIndex < this.currentLine.text.length) {
-                    game.dom.dialogueText.textContent += this.currentLine.text.charAt(this.textIndex);
-                    this.textIndex++;
-                    audio.playFootstep(); // صوت نغمة الآلة الكاتبة
+            clearInterval(this.timer);
+            this.timer = setInterval(() => {
+                if (this.index < this.current.text.length) {
+                    game.dom.dialogueText.textContent += this.current.text.charAt(this.index);
+                    this.index++;
                 } else {
-                    clearInterval(this.typingTimer);
-                    this.isTyping = false;
+                    clearInterval(this.timer);
                 }
             }, 35);
         }
     }
 
-    // ==========================================================================
-    // 6. INPUT MANAGER & ADAPTIVE DEVICE LAYOUT
-    // ==========================================================================
-    const keys = { left: false, right: false, run: false, interact: false };
-    const touchState = { left: false, right: false, run: false, interact: false };
+    let world, controller, dialogueEngine;
 
-    function initInputListeners() {
-        window.addEventListener('keydown', (e) => {
-            if (e.code === 'KeyA' || e.code === 'ArrowLeft') keys.left = true;
-            if (e.code === 'KeyD' || e.code === 'ArrowRight') keys.right = true;
-            if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') keys.run = true;
-            if (e.code === 'KeyE' || e.code === 'Space') {
-                keys.interact = true;
-                if (game.currentState === STATE.DIALOGUE) dialogueEngine.next();
-            }
-        });
+    function updateLogic() {
+        if (game.state !== STATE.PLAYING && game.state !== STATE.DIALOGUE) return;
 
-        window.addEventListener('keyup', (e) => {
-            if (e.code === 'KeyA' || e.code === 'ArrowLeft') keys.left = false;
-            if (e.code === 'KeyD' || e.code === 'ArrowRight') keys.right = false;
-            if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') keys.run = false;
-            if (e.code === 'KeyE' || e.code === 'Space') keys.interact = false;
-        });
+        const isMoving = controller.update();
+        world.update(controller.position, isMoving);
 
-        // إعداد أزرار اللمس
-        const bindTouchBtn = (id, keyName) => {
-            const btn = document.getElementById(id);
-            if (!btn) return;
-
-            btn.addEventListener('touchstart', (e) => {
-                e.preventDefault();
-                touchState[keyName] = true;
-                if (game.currentState === STATE.DIALOGUE) dialogueEngine.next();
-            });
-
-            btn.addEventListener('touchend', (e) => {
-                e.preventDefault();
-                touchState[keyName] = false;
-            });
-        };
-
-        bindTouchBtn('btnTouchLeft', 'left');
-        bindTouchBtn('btnTouchRight', 'right');
-        bindTouchBtn('btnTouchRun', 'run');
-        bindTouchBtn('btnTouchInteract', 'interact');
-    }
-
-    // ==========================================================================
-    // 7. MAIN GAME LOOP & CRITICAL POINT LOGIC
-    // ==========================================================================
-    const player = new Player();
-    const renderer = new RenderEngine();
-    const dialogueEngine = new DialogueSystem();
-
-    function updateGameLogic() {
-        if (game.currentState !== STATE.PLAYING && game.currentState !== STATE.DIALOGUE && game.currentState !== STATE.CRITICAL_POINT) return;
-
-        player.update(keys, touchState);
-
-        // تحديث موقع الكاميرا بسلاسة
-        game.targetCameraX = player.x - CONFIG.CANVAS_WIDTH / 2;
-        game.cameraX += (game.targetCameraX - game.cameraX) * 0.08;
-
-        // استهلاك واستقرار القلب (Heart Stability Calculation)
         if (game.isRunning) {
-            game.heartStability -= 0.08;
-        } else {
-            if (game.heartStability < CONFIG.MAX_STABILITY) {
-                game.heartStability += 0.02; // تعافي بطيء جداً
-            }
+            game.heartStability -= 0.09;
+        } else if (game.heartStability < CONFIG.MAX_STABILITY) {
+            game.heartStability += 0.02;
         }
 
-        // تقييد النسبة والتتبع الحسابي
         game.heartStability = Math.max(0, Math.min(CONFIG.MAX_STABILITY, game.heartStability));
-        if (game.heartStability < game.minStabilityReached) game.minStabilityReached = Math.round(game.heartStability);
+        if (game.heartStability < game.minStability) game.minStability = Math.round(game.heartStability);
 
-        // حساب معدل النبض الديناميكي BPM
-        game.bpm = Math.round(72 + (100 - game.heartStability) * 1.1);
-        if (game.bpm > game.maxBpmReached) game.maxBpmReached = game.bpm;
+        game.bpm = Math.round(72 + (100 - game.heartStability) * 1.15);
+        if (game.bpm > game.maxBpm) game.maxBpm = game.bpm;
 
-        // إطلاق نظام Critical Point عند الوصول إلى 20% و15%
-        if (game.heartStability <= CONFIG.CRITICAL_THRESHOLD_1 && !game.isCritical) {
+        if (game.heartStability <= CONFIG.CRITICAL_1 && !game.isCritical) {
             game.isCritical = true;
-            game.dom.criticalVignette.classList.remove('hidden');
+            game.dom.vignetteCritical.classList.remove('hidden');
+            game.dom.blurOverlay.classList.remove('hidden');
             audio.startTinnitus();
-            dialogueEngine.startSequence('CRITICAL_20');
+            game.cameraShake = 0.15;
+            dialogueEngine.start('CRITICAL_20');
         }
 
-        if (game.heartStability <= CONFIG.CRITICAL_THRESHOLD_2 && !game.isAdrenalineActive) {
-            game.isAdrenalineActive = true; // تفعيل سرعة الإدرينالين
+        if (game.heartStability <= CONFIG.CRITICAL_2 && !game.isAdrenaline) {
+            game.isAdrenaline = true;
         }
 
-        // شروط الأحداث الزمانية والمكانية للقصة
-        if (player.x > 600 && !game.blackoutOccurred) {
-            game.blackoutOccurred = true;
-            audio.playElectricSpark();
+        const z = Math.abs(controller.position.z);
+
+        if (z > 15 && !game.blackout) {
+            game.blackout = true;
+            world.triggerBlackout();
+            audio.playSpark();
             game.dom.screenFlash.style.opacity = '1';
-            setTimeout(() => game.dom.screenFlash.style.opacity = '0', 100);
-            dialogueEngine.startSequence(1);
+            setTimeout(() => game.dom.screenFlash.style.opacity = '0', 80);
+            dialogueEngine.start(1);
         }
 
-        if (player.x > 1800 && !game.hallucinationActive) {
+        if (z > 80 && !game.hallucinationActive) {
             game.hallucinationActive = true;
-            dialogueEngine.startSequence(3);
+            dialogueEngine.start(3);
         }
 
-        if (player.x > 4200 && !game.reactorReached) {
+        if (z > 220 && !game.reactorReached) {
             game.reactorReached = true;
-            triggerEndingSequence();
+            triggerEnding(true);
         }
 
-        // الموت عند الوصول إلى 0%
         if (game.heartStability <= 0) {
-            triggerEndingSequence(false);
+            triggerEnding(false);
         }
 
-        // تحديث شاشة HUD
         updateHUD();
     }
 
     function updateHUD() {
-        game.dom.stabilityPercentage.textContent = `${Math.round(game.heartStability)}%`;
-        game.dom.stabilityBarFill.style.width = `${game.heartStability}%`;
-        game.dom.bpmValueDisplay.textContent = game.bpm;
+        game.dom.txtStability.textContent = `${Math.round(game.heartStability)}%`;
+        game.dom.stBarFill.style.width = `${game.heartStability}%`;
+        game.dom.txtBpm.textContent = game.bpm;
 
-        if (game.heartStability <= CONFIG.CRITICAL_THRESHOLD_1) {
-            game.dom.stabilityBarFill.style.background = '#ff1e43';
-            game.dom.criticalWarningBadge.classList.remove('hidden');
+        if (game.heartStability <= CONFIG.CRITICAL_1) {
+            game.dom.stBarFill.style.background = '#ff1e43';
         } else {
-            game.dom.stabilityBarFill.style.background = '#00ff66';
-            game.dom.criticalWarningBadge.classList.add('hidden');
+            game.dom.stBarFill.style.background = '#00ff66';
         }
 
-        // رسم خط ECG التفاعلي في HUD
-        drawLiveECG();
+        drawHUDecg();
     }
 
-    function drawLiveECG() {
+    function drawHUDecg() {
         const ctx = game.hudEcgCtx;
         if (!ctx) return;
 
-        ctx.clearRect(0, 0, 160, 45);
+        ctx.clearRect(0, 0, 150, 40);
         ctx.strokeStyle = game.isCritical ? '#ff1e43' : '#00ff66';
         ctx.lineWidth = 2;
 
         ctx.beginPath();
-        const time = Date.now() * 0.005 * (game.bpm / 60);
-        ctx.moveTo(0, 22);
+        const time = Date.now() * 0.006 * (game.bpm / 60);
+        ctx.moveTo(0, 20);
 
-        for (let x = 0; x < 160; x += 5) {
-            const y = 22 + Math.sin(x * 0.1 + time) * (game.isCritical ? 12 : 5);
+        for (let x = 0; x < 150; x += 5) {
+            const y = 20 + Math.sin(x * 0.12 + time) * (game.isCritical ? 10 : 4);
             ctx.lineTo(x, y);
         }
         ctx.stroke();
     }
 
-    function render() {
-        renderer.drawEnvironment(game.ctx);
-        renderer.drawHallucinations(game.ctx);
-        player.draw(game.ctx);
-        renderer.drawLighting(game.lightCtx);
-
-        requestAnimationFrame(gameLoop);
-    }
-
-    function gameLoop() {
-        updateGameLogic();
-        render();
-    }
-
-    // ==========================================================================
-    // 8. ENDING & PLOT TWIST SEQUENCE
-    // ==========================================================================
-    function triggerEndingSequence(isGood = true) {
-        game.currentState = STATE.ENDING;
+    function triggerEnding(isGood) {
+        game.state = STATE.ENDING;
         audio.stopTinnitus();
 
         game.dom.endingOverlay.classList.remove('hidden');
-        game.dom.inGameHUD.classList.add('hidden');
+        game.dom.hudOverlay.classList.add('hidden');
 
         if (isGood) {
-            game.dom.endingHeaderTitle.textContent = "استقرار النبض";
-            game.dom.endingSubTitle.textContent = "RETURN TO CONSCIOUSNESS";
-            game.dom.endingStorySummary.textContent = "يكتشف البطل ألا وجود لمفاعل طوارئ اصطناعي... كل تلك الأروقة والظلال المظلمة كانت هلوسات داخل عقله أثناء محاولة الأطباء إنعاش قلبه على طاولة العملية. تم استقرار النبض والعودة للحياة.";
+            game.dom.endingTitle.textContent = "استقرار النبض";
+            game.dom.endingStory.textContent = "لم يكن هناك مفاعل اصطناعي... كل ما مررت به كان معركة داخل عقلك أثناء محاولة الأطباء إنعاش قلبك أثناء العملية. عادت المؤشرات للحياة بنجاح.";
         } else {
-            game.dom.endingHeaderTitle.textContent = "توقف القلب";
-            game.dom.endingSubTitle.textContent = "FLATLINE DETECTED";
-            game.dom.endingStorySummary.textContent = "توقف القلب عن النبض تماماً أثناء العملية... توقفت المؤشرات الحيوية وانتهت الرحلة بخط مستقيم صامت.";
+            game.dom.endingTitle.textContent = "توقف القلب";
+            game.dom.endingStory.textContent = "توقف القلب تماماً عن النبض... انتهت المحاولات الطبية بخط مستقيم صامت.";
         }
-
-        game.dom.statMaxBpm.textContent = `${game.maxBpmReached} BPM`;
-        game.dom.statMinStability.textContent = `${game.minStabilityReached}%`;
     }
 
-    // ==========================================================================
-    // 9. INITIALIZATION & SETUP
-    // ==========================================================================
-    function initApp() {
-        // ربط عناصر DOM
-        game.dom = {
-            viewport: document.getElementById('gameViewport'),
-            canvas: document.getElementById('gameCanvas'),
-            lightingCanvas: document.getElementById('lightingCanvas'),
-            audioUnlockModal: document.getElementById('audioUnlockModal'),
-            btnUnlockAudio: document.getElementById('btnUnlockAudio'),
-            loadingScreen: document.getElementById('loadingScreen'),
-            deviceSelectModal: document.getElementById('deviceSelectModal'),
-            btnConfirmDevice: document.getElementById('btnConfirmDevice'),
-            inGameHUD: document.getElementById('inGameHUD'),
-            dialogueBox: document.getElementById('dialogueBox'),
-            dialogueSpeaker: document.getElementById('dialogueSpeakerName'),
-            dialogueText: document.getElementById('dialogueTextBody'),
-            touchControls: document.getElementById('touchControlsLayer'),
-            stabilityPercentage: document.getElementById('stabilityPercentage'),
-            stabilityBarFill: document.getElementById('stabilityBarFill'),
-            bpmValueDisplay: document.getElementById('bpmValueDisplay'),
-            criticalVignette: document.getElementById('criticalVignette'),
-            criticalWarningBadge: document.getElementById('criticalWarningBadge'),
-            screenFlash: document.getElementById('screenFlash'),
-            endingOverlay: document.getElementById('endingOverlay'),
-            endingHeaderTitle: document.getElementById('endingHeaderTitle'),
-            endingSubTitle: document.getElementById('endingSubTitle'),
-            endingStorySummary: document.getElementById('endingStorySummary'),
-            statMaxBpm: document.getElementById('statMaxBpm'),
-            statMinStability: document.getElementById('statMinStability'),
-            btnRestartGame: document.getElementById('btnRestartGame')
-        };
-
-        game.ctx = game.dom.canvas.getContext('2d');
-        game.lightCtx = game.dom.lightingCanvas.getContext('2d');
-        game.hudEcgCtx = document.getElementById('hudEcgCanvas').getContext('2d');
-
-        // ضبط أحجام القماش
-        game.dom.canvas.width = CONFIG.CANVAS_WIDTH;
-        game.dom.canvas.height = CONFIG.CANVAS_HEIGHT;
-        game.dom.lightingCanvas.width = CONFIG.CANVAS_WIDTH;
-        game.dom.lightingCanvas.height = CONFIG.CANVAS_HEIGHT;
-
-        // أحداث الزر الأولي للتفاعل الصوتي
-        game.dom.btnUnlockAudio.addEventListener('click', () => {
-            audio.init();
-            game.dom.audioUnlockModal.classList.add('hidden');
-            game.dom.loadingScreen.classList.remove('hidden');
-
-            // بدء مؤشر شاشة التحميل التمهيدية 10 ثواني
-            setTimeout(() => {
-                game.dom.loadingScreen.classList.add('hidden');
-                game.dom.deviceSelectModal.classList.remove('hidden');
-            }, 3000);
-        });
-
-        // اختيار الجهاز والواجهة Adaptive Layout
-        document.querySelectorAll('.device-card').forEach(card => {
-            card.addEventListener('click', () => {
-                document.querySelectorAll('.device-card').forEach(c => c.classList.remove('selected'));
-                card.classList.add('selected');
-                game.selectedDevice = card.dataset.device;
-            });
-        });
-
-        game.dom.btnConfirmDevice.addEventListener('click', () => {
-            game.dom.deviceSelectModal.classList.add('hidden');
-            game.dom.inGameHUD.classList.remove('hidden');
-
-            // تطبيق نمط الشاشة حسب الجهاز Selected Device
-            game.dom.viewport.className = `device-${game.selectedDevice}`;
-            if (game.selectedDevice === 'phone' || game.selectedDevice === 'tablet' || game.selectedDevice === 'ipad') {
-                game.dom.touchControls.classList.remove('hidden');
-            }
-
-            game.currentState = STATE.PLAYING;
-            dialogueEngine.startSequence(0);
-
-            // بدء حلقة الصوت الديناميكية للقلب
-            setInterval(() => {
-                if (game.currentState === STATE.PLAYING || game.currentState === STATE.CRITICAL_POINT) {
-                    audio.triggerHeartbeat(game.isCritical ? 1.4 : 0.8);
-                }
-            }, (60 / game.bpm) * 1000);
-        });
-
-        game.dom.btnRestartGame.addEventListener('click', () => {
-            window.location.reload();
-        });
-
-        initInputListeners();
+    function gameLoop() {
+        updateLogic();
         requestAnimationFrame(gameLoop);
     }
 
-    window.addEventListener('DOMContentLoaded', initApp);
+    function init() {
+        game.dom = {
+            viewport: document.getElementById('gameViewport'),
+            audioInitModal: document.getElementById('audioInitModal'),
+            btnInitAudio: document.getElementById('btnInitAudio'),
+            loadingScreen: document.getElementById('loadingScreen'),
+            deviceModal: document.getElementById('deviceModal'),
+            btnStartGame: document.getElementById('btnStartGame'),
+            hudOverlay: document.getElementById('hudOverlay'),
+            dialogueBox: document.getElementById('dialogueBox'),
+            dialogueSpeaker: document.getElementById('dialogueSpeaker'),
+            dialogueText: document.getElementById('dialogueText'),
+            touchControls: document.getElementById('touchControls'),
+            txtStability: document.getElementById('txtStability'),
+            stBarFill: document.getElementById('stBarFill'),
+            txtBpm: document.getElementById('txtBpm'),
+            vignetteCritical: document.getElementById('vignetteCritical'),
+            blurOverlay: document.getElementById('blurOverlay'),
+            screenFlash: document.getElementById('screenFlash'),
+            crosshair: document.getElementById('crosshair'),
+            endingOverlay: document.getElementById('endingOverlay'),
+            endingTitle: document.getElementById('endingTitle'),
+            endingStory: document.getElementById('endingStory'),
+            btnRestart: document.getElementById('btnRestart')
+        };
+
+        game.hudEcgCtx = document.getElementById('hudEcgCanvas').getContext('2d');
+
+        game.dom.btnInitAudio.addEventListener('click', () => {
+            audio.init();
+            game.dom.audioInitModal.classList.add('hidden');
+            game.dom.loadingScreen.classList.remove('hidden');
+
+            setTimeout(() => {
+                game.dom.loadingScreen.classList.add('hidden');
+                game.dom.deviceModal.classList.remove('hidden');
+            }, 2500);
+        });
+
+        document.querySelectorAll('.device-option-box').forEach(box => {
+            box.addEventListener('click', () => {
+                document.querySelectorAll('.device-option-box').forEach(b => b.classList.remove('active-dev'));
+                box.classList.add('active-dev');
+                game.selectedDevice = box.dataset.device;
+            });
+        });
+
+        game.dom.btnStartGame.addEventListener('click', () => {
+            game.dom.deviceModal.classList.add('hidden');
+            game.dom.hudOverlay.classList.remove('hidden');
+
+            game.dom.viewport.className = `device-${game.selectedDevice}`;
+            if (game.selectedDevice !== 'computer') {
+                game.dom.touchControls.classList.remove('hidden');
+            } else {
+                game.dom.crosshair.classList.remove('hidden');
+            }
+
+            world = new World3D();
+            controller = new FirstPersonController(world.camera);
+            dialogueEngine = new DialogueEngine();
+
+            game.state = STATE.PLAYING;
+            dialogueEngine.start(0);
+
+            setInterval(() => {
+                if (game.state === STATE.PLAYING || game.state === STATE.CRITICAL) {
+                    audio.playHeartbeat(game.isCritical ? 1.4 : 0.85);
+                    game.cameraShake = game.isCritical ? 0.08 : 0.02;
+                }
+            }, (60 / game.bpm) * 1000);
+
+            requestAnimationFrame(gameLoop);
+        });
+
+        game.dom.btnRestart.addEventListener('click', () => {
+            window.location.reload();
+        });
+    }
+
+    window.addEventListener('DOMContentLoaded', init);
 
 })();
