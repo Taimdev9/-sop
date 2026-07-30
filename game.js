@@ -576,4 +576,304 @@
                 if (this.textIndex < this.currentLine.text.length) {
                     game.dom.dialogueText.textContent += this.currentLine.text.charAt(this.textIndex);
                     this.textIndex++;
-                    audio.pla
+                    audio.playFootstep(); // صوت نغمة الآلة الكاتبة
+                } else {
+                    clearInterval(this.typingTimer);
+                    this.isTyping = false;
+                }
+            }, 35);
+        }
+    }
+
+    // ==========================================================================
+    // 6. INPUT MANAGER & ADAPTIVE DEVICE LAYOUT
+    // ==========================================================================
+    const keys = { left: false, right: false, run: false, interact: false };
+    const touchState = { left: false, right: false, run: false, interact: false };
+
+    function initInputListeners() {
+        window.addEventListener('keydown', (e) => {
+            if (e.code === 'KeyA' || e.code === 'ArrowLeft') keys.left = true;
+            if (e.code === 'KeyD' || e.code === 'ArrowRight') keys.right = true;
+            if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') keys.run = true;
+            if (e.code === 'KeyE' || e.code === 'Space') {
+                keys.interact = true;
+                if (game.currentState === STATE.DIALOGUE) dialogueEngine.next();
+            }
+        });
+
+        window.addEventListener('keyup', (e) => {
+            if (e.code === 'KeyA' || e.code === 'ArrowLeft') keys.left = false;
+            if (e.code === 'KeyD' || e.code === 'ArrowRight') keys.right = false;
+            if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') keys.run = false;
+            if (e.code === 'KeyE' || e.code === 'Space') keys.interact = false;
+        });
+
+        // إعداد أزرار اللمس
+        const bindTouchBtn = (id, keyName) => {
+            const btn = document.getElementById(id);
+            if (!btn) return;
+
+            btn.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                touchState[keyName] = true;
+                if (game.currentState === STATE.DIALOGUE) dialogueEngine.next();
+            });
+
+            btn.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                touchState[keyName] = false;
+            });
+        };
+
+        bindTouchBtn('btnTouchLeft', 'left');
+        bindTouchBtn('btnTouchRight', 'right');
+        bindTouchBtn('btnTouchRun', 'run');
+        bindTouchBtn('btnTouchInteract', 'interact');
+    }
+
+    // ==========================================================================
+    // 7. MAIN GAME LOOP & CRITICAL POINT LOGIC
+    // ==========================================================================
+    const player = new Player();
+    const renderer = new RenderEngine();
+    const dialogueEngine = new DialogueSystem();
+
+    function updateGameLogic() {
+        if (game.currentState !== STATE.PLAYING && game.currentState !== STATE.DIALOGUE && game.currentState !== STATE.CRITICAL_POINT) return;
+
+        player.update(keys, touchState);
+
+        // تحديث موقع الكاميرا بسلاسة
+        game.targetCameraX = player.x - CONFIG.CANVAS_WIDTH / 2;
+        game.cameraX += (game.targetCameraX - game.cameraX) * 0.08;
+
+        // استهلاك واستقرار القلب (Heart Stability Calculation)
+        if (game.isRunning) {
+            game.heartStability -= 0.08;
+        } else {
+            if (game.heartStability < CONFIG.MAX_STABILITY) {
+                game.heartStability += 0.02; // تعافي بطيء جداً
+            }
+        }
+
+        // تقييد النسبة والتتبع الحسابي
+        game.heartStability = Math.max(0, Math.min(CONFIG.MAX_STABILITY, game.heartStability));
+        if (game.heartStability < game.minStabilityReached) game.minStabilityReached = Math.round(game.heartStability);
+
+        // حساب معدل النبض الديناميكي BPM
+        game.bpm = Math.round(72 + (100 - game.heartStability) * 1.1);
+        if (game.bpm > game.maxBpmReached) game.maxBpmReached = game.bpm;
+
+        // إطلاق نظام Critical Point عند الوصول إلى 20% و15%
+        if (game.heartStability <= CONFIG.CRITICAL_THRESHOLD_1 && !game.isCritical) {
+            game.isCritical = true;
+            game.dom.criticalVignette.classList.remove('hidden');
+            audio.startTinnitus();
+            dialogueEngine.startSequence('CRITICAL_20');
+        }
+
+        if (game.heartStability <= CONFIG.CRITICAL_THRESHOLD_2 && !game.isAdrenalineActive) {
+            game.isAdrenalineActive = true; // تفعيل سرعة الإدرينالين
+        }
+
+        // شروط الأحداث الزمانية والمكانية للقصة
+        if (player.x > 600 && !game.blackoutOccurred) {
+            game.blackoutOccurred = true;
+            audio.playElectricSpark();
+            game.dom.screenFlash.style.opacity = '1';
+            setTimeout(() => game.dom.screenFlash.style.opacity = '0', 100);
+            dialogueEngine.startSequence(1);
+        }
+
+        if (player.x > 1800 && !game.hallucinationActive) {
+            game.hallucinationActive = true;
+            dialogueEngine.startSequence(3);
+        }
+
+        if (player.x > 4200 && !game.reactorReached) {
+            game.reactorReached = true;
+            triggerEndingSequence();
+        }
+
+        // الموت عند الوصول إلى 0%
+        if (game.heartStability <= 0) {
+            triggerEndingSequence(false);
+        }
+
+        // تحديث شاشة HUD
+        updateHUD();
+    }
+
+    function updateHUD() {
+        game.dom.stabilityPercentage.textContent = `${Math.round(game.heartStability)}%`;
+        game.dom.stabilityBarFill.style.width = `${game.heartStability}%`;
+        game.dom.bpmValueDisplay.textContent = game.bpm;
+
+        if (game.heartStability <= CONFIG.CRITICAL_THRESHOLD_1) {
+            game.dom.stabilityBarFill.style.background = '#ff1e43';
+            game.dom.criticalWarningBadge.classList.remove('hidden');
+        } else {
+            game.dom.stabilityBarFill.style.background = '#00ff66';
+            game.dom.criticalWarningBadge.classList.add('hidden');
+        }
+
+        // رسم خط ECG التفاعلي في HUD
+        drawLiveECG();
+    }
+
+    function drawLiveECG() {
+        const ctx = game.hudEcgCtx;
+        if (!ctx) return;
+
+        ctx.clearRect(0, 0, 160, 45);
+        ctx.strokeStyle = game.isCritical ? '#ff1e43' : '#00ff66';
+        ctx.lineWidth = 2;
+
+        ctx.beginPath();
+        const time = Date.now() * 0.005 * (game.bpm / 60);
+        ctx.moveTo(0, 22);
+
+        for (let x = 0; x < 160; x += 5) {
+            const y = 22 + Math.sin(x * 0.1 + time) * (game.isCritical ? 12 : 5);
+            ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+    }
+
+    function render() {
+        renderer.drawEnvironment(game.ctx);
+        renderer.drawHallucinations(game.ctx);
+        player.draw(game.ctx);
+        renderer.drawLighting(game.lightCtx);
+
+        requestAnimationFrame(gameLoop);
+    }
+
+    function gameLoop() {
+        updateGameLogic();
+        render();
+    }
+
+    // ==========================================================================
+    // 8. ENDING & PLOT TWIST SEQUENCE
+    // ==========================================================================
+    function triggerEndingSequence(isGood = true) {
+        game.currentState = STATE.ENDING;
+        audio.stopTinnitus();
+
+        game.dom.endingOverlay.classList.remove('hidden');
+        game.dom.inGameHUD.classList.add('hidden');
+
+        if (isGood) {
+            game.dom.endingHeaderTitle.textContent = "استقرار النبض";
+            game.dom.endingSubTitle.textContent = "RETURN TO CONSCIOUSNESS";
+            game.dom.endingStorySummary.textContent = "يكتشف البطل ألا وجود لمفاعل طوارئ اصطناعي... كل تلك الأروقة والظلال المظلمة كانت هلوسات داخل عقله أثناء محاولة الأطباء إنعاش قلبه على طاولة العملية. تم استقرار النبض والعودة للحياة.";
+        } else {
+            game.dom.endingHeaderTitle.textContent = "توقف القلب";
+            game.dom.endingSubTitle.textContent = "FLATLINE DETECTED";
+            game.dom.endingStorySummary.textContent = "توقف القلب عن النبض تماماً أثناء العملية... توقفت المؤشرات الحيوية وانتهت الرحلة بخط مستقيم صامت.";
+        }
+
+        game.dom.statMaxBpm.textContent = `${game.maxBpmReached} BPM`;
+        game.dom.statMinStability.textContent = `${game.minStabilityReached}%`;
+    }
+
+    // ==========================================================================
+    // 9. INITIALIZATION & SETUP
+    // ==========================================================================
+    function initApp() {
+        // ربط عناصر DOM
+        game.dom = {
+            viewport: document.getElementById('gameViewport'),
+            canvas: document.getElementById('gameCanvas'),
+            lightingCanvas: document.getElementById('lightingCanvas'),
+            audioUnlockModal: document.getElementById('audioUnlockModal'),
+            btnUnlockAudio: document.getElementById('btnUnlockAudio'),
+            loadingScreen: document.getElementById('loadingScreen'),
+            deviceSelectModal: document.getElementById('deviceSelectModal'),
+            btnConfirmDevice: document.getElementById('btnConfirmDevice'),
+            inGameHUD: document.getElementById('inGameHUD'),
+            dialogueBox: document.getElementById('dialogueBox'),
+            dialogueSpeaker: document.getElementById('dialogueSpeakerName'),
+            dialogueText: document.getElementById('dialogueTextBody'),
+            touchControls: document.getElementById('touchControlsLayer'),
+            stabilityPercentage: document.getElementById('stabilityPercentage'),
+            stabilityBarFill: document.getElementById('stabilityBarFill'),
+            bpmValueDisplay: document.getElementById('bpmValueDisplay'),
+            criticalVignette: document.getElementById('criticalVignette'),
+            criticalWarningBadge: document.getElementById('criticalWarningBadge'),
+            screenFlash: document.getElementById('screenFlash'),
+            endingOverlay: document.getElementById('endingOverlay'),
+            endingHeaderTitle: document.getElementById('endingHeaderTitle'),
+            endingSubTitle: document.getElementById('endingSubTitle'),
+            endingStorySummary: document.getElementById('endingStorySummary'),
+            statMaxBpm: document.getElementById('statMaxBpm'),
+            statMinStability: document.getElementById('statMinStability'),
+            btnRestartGame: document.getElementById('btnRestartGame')
+        };
+
+        game.ctx = game.dom.canvas.getContext('2d');
+        game.lightCtx = game.dom.lightingCanvas.getContext('2d');
+        game.hudEcgCtx = document.getElementById('hudEcgCanvas').getContext('2d');
+
+        // ضبط أحجام القماش
+        game.dom.canvas.width = CONFIG.CANVAS_WIDTH;
+        game.dom.canvas.height = CONFIG.CANVAS_HEIGHT;
+        game.dom.lightingCanvas.width = CONFIG.CANVAS_WIDTH;
+        game.dom.lightingCanvas.height = CONFIG.CANVAS_HEIGHT;
+
+        // أحداث الزر الأولي للتفاعل الصوتي
+        game.dom.btnUnlockAudio.addEventListener('click', () => {
+            audio.init();
+            game.dom.audioUnlockModal.classList.add('hidden');
+            game.dom.loadingScreen.classList.remove('hidden');
+
+            // بدء مؤشر شاشة التحميل التمهيدية 10 ثواني
+            setTimeout(() => {
+                game.dom.loadingScreen.classList.add('hidden');
+                game.dom.deviceSelectModal.classList.remove('hidden');
+            }, 3000);
+        });
+
+        // اختيار الجهاز والواجهة Adaptive Layout
+        document.querySelectorAll('.device-card').forEach(card => {
+            card.addEventListener('click', () => {
+                document.querySelectorAll('.device-card').forEach(c => c.classList.remove('selected'));
+                card.classList.add('selected');
+                game.selectedDevice = card.dataset.device;
+            });
+        });
+
+        game.dom.btnConfirmDevice.addEventListener('click', () => {
+            game.dom.deviceSelectModal.classList.add('hidden');
+            game.dom.inGameHUD.classList.remove('hidden');
+
+            // تطبيق نمط الشاشة حسب الجهاز Selected Device
+            game.dom.viewport.className = `device-${game.selectedDevice}`;
+            if (game.selectedDevice === 'phone' || game.selectedDevice === 'tablet' || game.selectedDevice === 'ipad') {
+                game.dom.touchControls.classList.remove('hidden');
+            }
+
+            game.currentState = STATE.PLAYING;
+            dialogueEngine.startSequence(0);
+
+            // بدء حلقة الصوت الديناميكية للقلب
+            setInterval(() => {
+                if (game.currentState === STATE.PLAYING || game.currentState === STATE.CRITICAL_POINT) {
+                    audio.triggerHeartbeat(game.isCritical ? 1.4 : 0.8);
+                }
+            }, (60 / game.bpm) * 1000);
+        });
+
+        game.dom.btnRestartGame.addEventListener('click', () => {
+            window.location.reload();
+        });
+
+        initInputListeners();
+        requestAnimationFrame(gameLoop);
+    }
+
+    window.addEventListener('DOMContentLoaded', initApp);
+
+})();
