@@ -1,157 +1,124 @@
-/* ==========================================================================
-   LAST BEAT - Complete CSS Design System & Layout Adaptive Engine
-   ========================================================================== */
-
-:root {
-    --color-bg-dark: #030304;
-    --color-panel-bg: rgba(10, 12, 16, 0.92);
-    --color-ecg-green: #00ff66;
-    --color-ecg-dim: rgba(0, 255, 102, 0.2);
-    --color-alert-red: #ff1e43;
-    --color-alert-glow: rgba(255, 30, 67, 0.6);
-    --color-warning-orange: #ff9900;
-    --color-text-main: #e0e6ed;
-    --color-text-muted: #7a889b;
-    
-    --font-pixel: 'Courier New', Courier, monospace;
-    --z-canvas: 1;
-    --z-lighting: 2;
-    --z-particles: 3;
-    --z-fx: 10;
-    --z-hud: 20;
-    --z-controls: 30;
-    --z-dialogue: 40;
-    --z-modal: 100;
-}
-
 * {
-    box-sizing: border-box;
     margin: 0;
     padding: 0;
+    box-sizing: border-box;
     user-select: none;
     -webkit-user-select: none;
-    -webkit-touch-callout: none;
     touch-action: none;
-    font-family: var(--font-pixel);
+    font-family: 'Courier New', Courier, monospace;
 }
 
 html, body {
     width: 100vw;
     height: 100vh;
-    background-color: #000000;
+    background-color: #000;
     overflow: hidden;
     display: flex;
     justify-content: center;
     align-items: center;
 }
 
-/* حاوي الشاشة التكيفي */
 #gameViewport {
     position: relative;
     width: 100vw;
     height: 100vh;
-    background: var(--color-bg-dark);
+    background: #000;
     overflow: hidden;
-    display: flex;
-    justify-content: center;
-    align-items: center;
 }
 
-/* ضبط قماش اللعبة Canvas والطبقات */
-#gameCanvas, #lightingCanvas, #particleCanvas {
+#threeCanvasContainer {
+    width: 100%;
+    height: 100%;
     position: absolute;
     top: 0;
     left: 0;
-    width: 100%;
-    height: 100%;
-    object-fit: contain;
-    image-rendering: pixelated;
-    image-rendering: crisp-edges;
-    image-rendering: -moz-crisp-edges;
+    z-index: 1;
 }
 
-#gameCanvas { z-index: var(--z-canvas); }
-#lightingCanvas { z-index: var(--z-lighting); mix-blend-mode: multiply; }
-#particleCanvas { z-index: var(--z-particles); pointer-events: none; }
+#threeCanvasContainer canvas {
+    width: 100% !important;
+    height: 100% !important;
+    display: block;
+}
 
-/* ==========================================================================
-   المؤثرات البصرية للرعب والنقطة الحرجة FX Layer System
-   ========================================================================== */
-
-.fx-overlay-system {
+.fx-layer-container {
     position: absolute;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
     pointer-events: none;
-    z-index: var(--z-fx);
+    z-index: 10;
 }
 
-.vignette-normal {
+.vignette-layer {
     position: absolute;
     width: 100%;
     height: 100%;
     box-shadow: inset 0 0 120px rgba(0, 0, 0, 0.85);
-    transition: box-shadow 0.5s ease;
+    transition: box-shadow 0.4s ease;
 }
 
-.critical-vignette-layer {
+.vignette-critical {
     position: absolute;
     width: 100%;
     height: 100%;
-    box-shadow: inset 0 0 180px var(--color-alert-red);
-    animation: criticalPulse 0.6s infinite alternate cubic-bezier(0.4, 0, 0.6, 1);
+    box-shadow: inset 0 0 180px rgba(255, 30, 67, 0.8);
+    animation: pulseCritical 0.6s infinite alternate cubic-bezier(0.4, 0, 0.6, 1);
 }
 
-.critical-vignette-layer.fatal {
-    animation: fatalPulse 0.35s infinite alternate cubic-bezier(0.4, 0, 0.6, 1);
+.vignette-critical.fatal {
+    animation: pulseFatal 0.35s infinite alternate cubic-bezier(0.4, 0, 0.6, 1);
 }
 
-@keyframes criticalPulse {
-    0% { opacity: 0.3; box-shadow: inset 0 0 100px var(--color-alert-red); }
-    100% { opacity: 0.9; box-shadow: inset 0 0 220px var(--color-alert-red); }
+@keyframes pulseCritical {
+    0% { opacity: 0.3; box-shadow: inset 0 0 100px rgba(255, 30, 67, 0.5); }
+    100% { opacity: 0.95; box-shadow: inset 0 0 220px rgba(255, 30, 67, 0.95); }
 }
 
-@keyframes fatalPulse {
-    0% { opacity: 0.5; box-shadow: inset 0 0 150px var(--color-alert-red); }
-    100% { opacity: 1; box-shadow: inset 0 0 280px var(--color-alert-red); }
+@keyframes pulseFatal {
+    0% { opacity: 0.6; box-shadow: inset 0 0 160px rgba(255, 30, 67, 0.7); }
+    100% { opacity: 1; box-shadow: inset 0 0 280px rgba(255, 30, 67, 1); }
 }
 
-.crt-scanlines {
+.crt-overlay-layer {
     position: absolute;
     width: 100%;
     height: 100%;
-    background: linear-gradient(
-        rgba(18, 16, 16, 0) 50%, 
-        rgba(0, 0, 0, 0.35) 50%
-    );
+    background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.3) 50%);
     background-size: 100% 4px;
-    opacity: 0.7;
+    opacity: 0.6;
 }
 
-.screen-flash-layer {
+.flash-layer {
     position: absolute;
     width: 100%;
     height: 100%;
-    background-color: #ffffff;
+    background: #ffffff;
     opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.04s ease-out;
+    transition: opacity 0.05s ease-out;
 }
 
-.screen-noise-layer {
+.blur-layer {
     position: absolute;
     width: 100%;
     height: 100%;
-    opacity: 0.04;
-    pointer-events: none;
-    background-image: url('data:image/svg+xml;utf8,<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"><filter id="noiseFilter"><feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="3" stitchTiles="stitch"/></filter><rect width="100%" height="100%" filter="url(%23noiseFilter)"/></svg>');
+    backdrop-filter: blur(4px);
+    transition: backdrop-filter 0.5s ease;
 }
 
-/* ==========================================================================
-   النوافذ المنبثقة والشاشات السينمائية Overlay Modals
-   ========================================================================== */
+.crosshair-dot {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 4px;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.5);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 15;
+    pointer-events: none;
+}
 
 .overlay-modal {
     position: absolute;
@@ -159,13 +126,13 @@ html, body {
     left: 0;
     width: 100%;
     height: 100%;
-    background: #000000;
-    z-index: var(--z-modal);
+    background: #000;
+    z-index: 100;
     display: flex;
     justify-content: center;
     align-items: center;
     opacity: 1;
-    transition: opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+    transition: opacity 0.8s ease;
 }
 
 .overlay-modal.hidden {
@@ -173,142 +140,152 @@ html, body {
     pointer-events: none;
 }
 
-/* نافذة تفعيل الصوت */
-.audio-start-box {
-    text-align: center;
-    max-width: 480px;
+.modal-card {
+    background: #0b0d12;
+    border: 1px solid #1a202c;
     padding: 35px;
-    background: var(--color-panel-bg);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 8px;
-    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.9);
+    border-radius: 10px;
+    text-align: center;
+    max-width: 460px;
+    color: #fff;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.9);
 }
 
-.audio-icon-pulse {
+.icon-pulse {
     font-size: 3rem;
     margin-bottom: 15px;
-    animation: floatIcon 2s infinite ease-in-out;
+    animation: iconFloat 2s infinite ease-in-out;
 }
 
-@keyframes floatIcon {
+@keyframes iconFloat {
     0%, 100% { transform: translateY(0); }
     50% { transform: translateY(-8px); }
 }
 
-.audio-title {
-    color: var(--color-text-main);
-    font-size: 1.4rem;
-    margin-bottom: 12px;
-    letter-spacing: 1px;
+.card-title {
+    font-size: 1.3rem;
+    color: #00ff66;
+    margin-bottom: 10px;
 }
 
-.audio-desc {
-    color: var(--color-text-muted);
+.card-desc {
     font-size: 0.85rem;
+    color: #718096;
     line-height: 1.6;
     margin-bottom: 25px;
 }
 
-/* شاشة التحميل وقارئ ECG */
-.intro-brand-box {
-    text-align: center;
-    width: 80%;
-    max-width: 650px;
+.main-action-btn {
+    background: #ff1e43;
+    color: #fff;
+    border: none;
+    padding: 14px 35px;
+    font-size: 0.95rem;
+    font-weight: bold;
+    letter-spacing: 2px;
+    border-radius: 4px;
+    cursor: pointer;
+    box-shadow: 0 4px 15px rgba(255, 30, 67, 0.5);
+    transition: all 0.2s ease;
 }
 
-.brand-sub {
+.main-action-btn:hover {
+    background: #e60021;
+    transform: scale(1.03);
+}
+
+.brand-box {
+    text-align: center;
+    color: #fff;
+    width: 80%;
+    max-width: 600px;
+}
+
+.team-tag {
     font-size: 0.85rem;
-    color: var(--color-text-muted);
+    color: #718096;
     letter-spacing: 4px;
     margin-bottom: 10px;
 }
 
-.brand-game-title {
+.main-title-3d {
     font-size: 3.8rem;
-    color: var(--color-alert-red);
-    letter-spacing: 14px;
-    text-shadow: 0 0 20px var(--color-alert-glow);
+    color: #ff1e43;
+    letter-spacing: 12px;
+    text-shadow: 0 0 20px rgba(255, 30, 67, 0.6);
     font-weight: 900;
 }
 
-.brand-arabic-title {
+.sub-title-ar {
     font-size: 1.2rem;
-    color: #ffffff;
     letter-spacing: 6px;
     margin-top: -5px;
-    margin-bottom: 30px;
+    margin-bottom: 25px;
     opacity: 0.8;
 }
 
-.ecg-loader-wrapper {
+.ecg-container {
     width: 100%;
     height: 80px;
-    margin: 20px 0;
+    margin: 15px 0;
 }
 
-.ecg-svg-display {
+.ecg-svg {
     width: 100%;
     height: 100%;
 }
 
-.ecg-background-path {
+.ecg-bg {
     fill: none;
-    stroke: var(--color-ecg-dim);
+    stroke: rgba(0, 255, 102, 0.15);
     stroke-width: 2;
 }
 
-.ecg-active-path {
+.ecg-pulse {
     fill: none;
-    stroke: var(--color-ecg-green);
+    stroke: #00ff66;
     stroke-width: 3;
     stroke-dasharray: 800;
     stroke-dashoffset: 800;
-    animation: ecgSweep 2.2s infinite linear;
+    animation: ecgDraw 2.2s infinite linear;
 }
 
-@keyframes ecgSweep {
+@keyframes ecgDraw {
     0% { stroke-dashoffset: 800; }
     100% { stroke-dashoffset: 0; }
 }
 
-.loading-status-text {
-    color: var(--color-text-muted);
+.status-msg {
+    color: #718096;
     font-size: 0.8rem;
     letter-spacing: 2px;
 }
 
-/* شاشة اختيار الجهاز */
-.device-modal-content {
-    background: var(--color-panel-bg);
-    border: 1px solid #1f242d;
-    padding: 30px 40px;
+.device-card-modal {
+    background: #0b0d12;
+    border: 1px solid #1a202c;
+    padding: 30px;
     border-radius: 12px;
-    width: 90%;
-    max-width: 720px;
     text-align: center;
+    color: #fff;
+    width: 90%;
+    max-width: 680px;
 }
 
-.modal-header {
-    color: var(--color-ecg-green);
+.device-heading {
+    color: #00ff66;
     font-size: 1.3rem;
-    margin-bottom: 4px;
-}
-
-.modal-subtext {
-    color: var(--color-text-muted);
-    font-size: 0.75rem;
-    letter-spacing: 2px;
     margin-bottom: 25px;
 }
 
-.device-selection-grid {
+.device-options-grid {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
     gap: 15px;
-    margin-bottom: 30px;
+    margin-bottom: 25px;
 }
 
-.device-card {
+.device-option-box {
     background: rgba(255, 255, 255, 0.03);
     border: 1px solid rgba(255, 255, 255, 0.08);
     padding: 20px 10px;
@@ -317,63 +294,37 @@ html, body {
     transition: all 0.25s ease;
 }
 
-.device-card:hover, .device-card.selected {
+.device-option-box:hover, .device-option-box.active-dev {
     background: rgba(0, 255, 102, 0.08);
-    border-color: var(--color-ecg-green);
+    border-color: #00ff66;
     transform: translateY(-4px);
 }
 
-.device-card .device-icon { font-size: 2.2rem; margin-bottom: 10px; }
-.device-card .device-title { color: #fff; font-size: 1rem; font-weight: bold; margin-bottom: 6px; }
-.device-card .device-detail { color: var(--color-text-muted); font-size: 0.65rem; line-height: 1.3; }
+.dev-icon { font-size: 2.2rem; margin-bottom: 8px; }
+.dev-name { font-size: 0.9rem; font-weight: bold; }
 
-.primary-btn {
-    background: var(--color-alert-red);
-    color: #ffffff;
-    border: none;
-    padding: 14px 36px;
-    font-size: 0.95rem;
-    font-weight: bold;
-    letter-spacing: 2px;
-    border-radius: 4px;
-    cursor: pointer;
-    box-shadow: 0 4px 15px var(--color-alert-glow);
-    transition: all 0.2s ease;
-}
-
-.primary-btn:hover {
-    background: #e60021;
-    transform: scale(1.03);
-}
-
-/* ==========================================================================
-   واجهة اللعب الرئيسية HUD System
-   ========================================================================== */
-
-.hud-container {
+.hud-layer {
     position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    padding: 20px;
-    pointer-events: none;
-    z-index: var(--z-hud);
+    top: 20px;
+    left: 20px;
+    right: 20px;
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
+    pointer-events: none;
+    z-index: 20;
 }
 
-.hud-container.hidden { display: none; }
+.hud-layer.hidden { display: none; }
 
-.hud-top-left {
+.hud-left {
     display: flex;
+    gap: 12px;
     align-items: center;
-    gap: 15px;
 }
 
-.heart-status-panel {
-    background: var(--color-panel-bg);
+.heart-panel {
+    background: rgba(11, 13, 18, 0.85);
     border: 1px solid rgba(255, 255, 255, 0.1);
     padding: 8px 16px;
     border-radius: 30px;
@@ -383,43 +334,47 @@ html, body {
     backdrop-filter: blur(8px);
 }
 
-.heart-beat-element {
-    font-size: 1.4rem;
-    display: inline-block;
+.heart-icon {
+    font-size: 1.3rem;
+    animation: heartAnim 1s infinite ease-in-out;
 }
 
-.heart-stats-data {
+@keyframes heartAnim {
+    0% { transform: scale(1); }
+    15% { transform: scale(1.25); }
+    30% { transform: scale(1); }
+}
+
+.heart-info {
     display: flex;
     flex-direction: column;
     gap: 4px;
 }
 
-.stability-header {
+.stability-row {
     display: flex;
     justify-content: space-between;
     font-size: 0.65rem;
-    color: var(--color-text-muted);
-    letter-spacing: 1px;
+    color: #718096;
     gap: 15px;
 }
 
-.stability-bar-track {
+.st-bar-bg {
     width: 110px;
-    height: 7px;
+    height: 6px;
     background: rgba(255, 255, 255, 0.1);
-    border-radius: 4px;
+    border-radius: 3px;
     overflow: hidden;
 }
 
-.stability-bar-fill {
+.st-bar-fill {
     height: 100%;
-    background: var(--color-ecg-green);
-    border-radius: 4px;
+    background: #00ff66;
     transition: width 0.3s ease, background 0.3s ease;
 }
 
-.bpm-counter-panel {
-    background: var(--color-panel-bg);
+.bpm-panel {
+    background: rgba(11, 13, 18, 0.85);
     border: 1px solid rgba(255, 255, 255, 0.1);
     padding: 6px 14px;
     border-radius: 8px;
@@ -427,199 +382,151 @@ html, body {
     backdrop-filter: blur(8px);
 }
 
-.bpm-label { font-size: 0.55rem; color: var(--color-text-muted); }
-.bpm-value { font-size: 1.1rem; font-weight: bold; color: var(--color-ecg-green); }
+.bpm-title { font-size: 0.55rem; color: #718096; }
+.bpm-num { font-size: 1.1rem; font-weight: bold; color: #00ff66; }
 
-.hud-top-right {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    gap: 8px;
-}
-
-.ecg-live-box {
-    background: var(--color-panel-bg);
+.hud-right {
+    background: rgba(11, 13, 18, 0.85);
     border: 1px solid rgba(0, 255, 102, 0.2);
     border-radius: 6px;
     padding: 4px 8px;
     backdrop-filter: blur(8px);
 }
 
-.critical-badge {
-    background: rgba(255, 30, 67, 0.2);
-    border: 1px solid var(--color-alert-red);
-    color: var(--color-alert-red);
-    font-size: 0.65rem;
-    padding: 4px 10px;
-    border-radius: 4px;
-    letter-spacing: 1px;
-    animation: badgeBlink 0.5s infinite alternate;
-}
-
-@keyframes badgeBlink {
-    0% { opacity: 0.3; }
-    100% { opacity: 1; }
-}
-
-/* ==========================================================================
-   نظام الحوارات Dialogue System
-   ========================================================================== */
-
-.dialogue-box-wrapper {
+.dialogue-box {
     position: absolute;
     bottom: 25px;
     left: 50%;
     transform: translateX(-50%);
     width: 85%;
-    max-width: 780px;
-    background: var(--color-panel-bg);
+    max-width: 750px;
+    background: rgba(11, 13, 18, 0.92);
     border: 2px solid #282e3a;
     border-radius: 8px;
     padding: 18px 24px;
-    z-index: var(--z-dialogue);
-    display: flex;
-    gap: 20px;
-    align-items: center;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.95);
+    z-index: 40;
+    color: #fff;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.9);
 }
 
-.dialogue-box-wrapper.hidden { display: none; }
+.dialogue-box.hidden { display: none; }
 
-.dialogue-avatar-container {
-    width: 64px;
-    height: 64px;
-    background: #000;
-    border: 1px solid #333;
-    border-radius: 4px;
-    flex-shrink: 0;
-}
-
-.dialogue-text-container {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-}
-
-.speaker-name {
-    color: var(--color-ecg-green);
+.speaker-title {
+    color: #00ff66;
     font-size: 0.8rem;
     font-weight: bold;
     letter-spacing: 2px;
     margin-bottom: 6px;
 }
 
-.text-body {
-    color: var(--color-text-main);
+.speaker-body {
+    color: #e2e8f0;
     font-size: 0.95rem;
     line-height: 1.5;
     min-height: 42px;
 }
 
-.continue-hint {
-    color: var(--color-text-muted);
+.dialogue-hint {
+    color: #718096;
     font-size: 0.65rem;
     text-align: left;
     margin-top: 8px;
-    animation: hintPulse 1.2s infinite ease-in-out;
+    animation: blinkHint 1.2s infinite ease-in-out;
 }
 
-@keyframes hintPulse {
+@keyframes blinkHint {
     0%, 100% { opacity: 0.3; }
     50% { opacity: 0.9; }
 }
 
-/* ==========================================================================
-   أزرار التحكم باللمس Touch Controls
-   ========================================================================== */
-
-.touch-controls-container {
+.touch-layer {
     position: absolute;
-    bottom: 25px;
+    top: 0;
     left: 0;
     width: 100%;
-    padding: 0 30px;
-    display: flex;
-    justify-content: space-between;
-    z-index: var(--z-controls);
+    height: 100%;
+    z-index: 30;
     pointer-events: none;
 }
 
-.touch-controls-container.hidden { display: none; }
+.touch-layer.hidden { display: none; }
 
-.touch-group-left, .touch-group-right {
+.touch-zone {
+    position: absolute;
+    bottom: 0;
+    height: 70%;
+    pointer-events: auto;
+}
+
+.left-zone { left: 0; width: 45%; }
+.right-zone { right: 0; width: 45%; }
+
+.joystick-knob {
+    position: absolute;
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.2);
+    border: 2px solid rgba(0, 255, 102, 0.5);
+    display: none;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+}
+
+.touch-actions {
+    position: absolute;
+    bottom: 30px;
+    right: 30px;
     display: flex;
     gap: 15px;
     pointer-events: auto;
 }
 
-.touch-control-btn {
-    width: 68px;
-    height: 68px;
+.touch-action-btn {
+    width: 65px;
+    height: 65px;
     border-radius: 50%;
-    background: rgba(20, 24, 33, 0.65);
+    background: rgba(11, 13, 18, 0.7);
     border: 1.5px solid rgba(255, 255, 255, 0.2);
-    color: #ffffff;
+    color: #fff;
     font-size: 1.5rem;
     display: flex;
     justify-content: center;
     align-items: center;
-    backdrop-filter: blur(6px);
-    transition: all 0.1s ease;
+    backdrop-filter: blur(5px);
 }
 
-.touch-control-btn:active {
-    background: rgba(0, 255, 102, 0.25);
-    border-color: var(--color-ecg-green);
-    transform: scale(0.92);
+.touch-action-btn:active {
+    background: rgba(0, 255, 102, 0.3);
+    border-color: #00ff66;
 }
 
-/* ==========================================================================
-   تكييف الواجهات حسب نوع الجهاز Adaptive Device Styling
-   ========================================================================== */
+.device-phone .touch-layer { display: block; }
+.device-phone .crosshair-dot { display: none; }
+.device-computer .touch-layer { display: none !important; }
 
-/* أجهزة الموبايل - Mobile First Landscape */
-.device-phone .touch-controls-container { display: flex; }
-.device-phone .dialogue-box-wrapper { width: 92%; bottom: 15px; padding: 12px 16px; }
-
-/* الأجهزة اللوحية Tablet & iPad */
-.device-tablet .touch-control-btn, .device-ipad .touch-control-btn { width: 80px; height: 80px; font-size: 1.8rem; }
-.device-ipad #gameCanvas { max-width: 100%; aspect-ratio: 4 / 3; }
-
-/* الكمبيوتر Desktop */
-.device-computer .touch-controls-container { display: none !important; }
-
-/* ==========================================================================
-   شاشة النهاية Ending Screen
-   ========================================================================== */
-
-.ending-box {
+.ending-card {
     text-align: center;
-    max-width: 620px;
+    max-width: 600px;
     width: 90%;
     padding: 30px;
-    background: var(--color-panel-bg);
-    border: 1px solid #222;
+    background: #0b0d12;
+    border: 1px solid #1a202c;
     border-radius: 10px;
+    color: #fff;
 }
 
-.ending-main-title {
-    font-size: 2.8rem;
+.ending-title {
+    font-size: 2.6rem;
     letter-spacing: 8px;
-    color: var(--color-alert-red);
-    margin-bottom: 5px;
+    color: #ff1e43;
+    margin-bottom: 15px;
 }
 
-.ending-sub-title {
-    font-size: 0.9rem;
-    color: var(--color-text-muted);
-    letter-spacing: 3px;
-    margin-bottom: 20px;
-}
-
-.ending-ecg-visualization {
+.ending-ecg-box {
     width: 100%;
     height: 90px;
-    background: rgba(0,0,0,0.5);
+    background: rgba(0,0,0,0.6);
     border-radius: 6px;
     margin-bottom: 20px;
     display: flex;
@@ -627,23 +534,9 @@ html, body {
     align-items: center;
 }
 
-.ending-text-summary {
-    color: var(--color-text-main);
+.ending-desc {
+    color: #a0aec0;
     font-size: 0.9rem;
     line-height: 1.7;
     margin-bottom: 25px;
 }
-
-.game-stats-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 10px;
-    background: rgba(255, 255, 255, 0.02);
-    padding: 12px;
-    border-radius: 6px;
-    margin-bottom: 25px;
-}
-
-.stat-item { display: flex; flex-direction: column; gap: 4px; }
-.stat-label { font-size: 0.65rem; color: var(--color-text-muted); }
-.stat-value { font-size: 0.95rem; font-weight: bold; color: var(--color-ecg-green); }
