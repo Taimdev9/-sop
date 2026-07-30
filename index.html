@@ -3,177 +3,126 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, orientation=landscape">
-    <title>LAST BEAT | آخر نبضة - Game Jam Edition</title>
+    <title>LAST BEAT 3D</title>
     <link rel="stylesheet" href="style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
 <body>
 
-    <!-- حاوي اللعبة الرئيسي الشامل -->
     <div id="gameViewport" class="device-computer">
-        
-        <!-- اللوحة البرمجية للعبة Canvas -->
-        <canvas id="gameCanvas" width="960" height="540"></canvas>
-        <canvas id="lightingCanvas" width="960" height="540"></canvas>
-        <canvas id="particleCanvas" width="960" height="540"></canvas>
+        <div id="threeCanvasContainer"></div>
 
-        <!-- طبقات الشاشات والمؤثرات البصرية الرسومية (FX Engine Layer) -->
-        <div id="fxOverlay" class="fx-overlay-system">
-            <div id="vignetteLayer" class="vignette-normal"></div>
-            <div id="criticalVignette" class="critical-vignette-layer hidden"></div>
-            <div id="crtScanlines" class="crt-scanlines"></div>
-            <div id="glitchOverlay" class="glitch-overlay hidden"></div>
-            <div id="screenFlash" class="screen-flash-layer"></div>
-            <div id="screenNoise" class="screen-noise-layer"></div>
+        <div id="fxLayer" class="fx-layer-container">
+            <div id="vignetteNormal" class="vignette-layer"></div>
+            <div id="vignetteCritical" class="vignette-critical hidden"></div>
+            <div id="crtOverlay" class="crt-overlay-layer"></div>
+            <div id="screenFlash" class="flash-layer"></div>
+            <div id="blurOverlay" class="blur-layer hidden"></div>
         </div>
 
-        <!-- واجهة التفاعل الأولي لتفعيل نظام الصوت Web Audio API -->
-        <div id="audioUnlockModal" class="overlay-modal active">
-            <div class="audio-start-box">
-                <div class="audio-icon-pulse">🎧</div>
-                <h2 class="audio-title">تجربة صوتية تفاعلية</h2>
-                <p class="audio-desc">يُوصى باستخدام السماعات للحصول على أفضل تجربة رعب نفسي وتتبع نبضات القلب الحركية.</p>
-                <button id="btnUnlockAudio" class="primary-btn">انقر للبدء والتهيئة</button>
+        <div id="crosshair" class="crosshair-dot hidden"></div>
+
+        <div id="audioInitModal" class="overlay-modal active">
+            <div class="modal-card">
+                <div class="icon-pulse">🎧</div>
+                <h2 class="card-title">تجربة صوتية ورعب نفسي 3D</h2>
+                <p class="card-desc">استخدم السماعات للحصول على مجسم صووتي كامل ونبض حقيقي.</p>
+                <button id="btnInitAudio" class="main-action-btn">بدء التجربة</button>
             </div>
         </div>
 
-        <!-- شاشة التحميل والشعار التمهيدي -->
         <div id="loadingScreen" class="overlay-modal hidden">
-            <div class="intro-brand-box">
-                <div class="brand-sub">TRL TEAM FOR DEVELOPMENT PRESENTS</div>
-                <h1 class="brand-game-title">LAST BEAT</h1>
-                <div class="brand-arabic-title">آخر نبضة</div>
+            <div class="brand-box">
+                <div class="team-tag">TRL TEAM FOR DEVELOPMENT</div>
+                <h1 class="main-title-3d">LAST BEAT</h1>
+                <div class="sub-title-ar">آخر نبضة</div>
                 
-                <div class="ecg-loader-wrapper">
-                    <svg class="ecg-svg-display" viewBox="0 0 600 120">
-                        <path class="ecg-background-path" d="M0,60 L200,60 L210,30 L220,90 L230,10 L240,110 L250,60 L600,60"/>
-                        <path id="ecgAnimatedPath" class="ecg-active-path" d="M0,60 L200,60 L210,30 L220,90 L230,10 L240,110 L250,60 L600,60"/>
+                <div class="ecg-container">
+                    <svg class="ecg-svg" viewBox="0 0 600 120">
+                        <path class="ecg-bg" d="M0,60 L200,60 L210,30 L220,90 L230,10 L240,110 L250,60 L600,60"/>
+                        <path id="ecgPath" class="ecg-pulse" d="M0,60 L200,60 L210,30 L220,90 L230,10 L240,110 L250,60 L600,60"/>
                     </svg>
                 </div>
                 
-                <div id="loadingProgressText" class="loading-status-text">جاري مزامنة المفاعل مع نبض القلب... [0%]</div>
+                <div id="loadStatusText" class="status-msg">جاري تجهيز مستشفى 2089...</div>
             </div>
         </div>
 
-        <!-- شاشة اختيار طريقة التحكم والجهاز -->
-        <div id="deviceSelectModal" class="overlay-modal hidden">
-            <div class="device-modal-content">
-                <h2 class="modal-header">اختر نوع جهازك لتحديد نمط الواجهة</h2>
-                <p class="modal-subtext">SELECT YOUR DEVICE PLATFORM FOR ADAPTIVE UI</p>
-                
-                <div class="device-selection-grid">
-                    <div class="device-card" data-device="phone">
-                        <div class="device-icon">📱</div>
-                        <div class="device-title">Phone</div>
-                        <div class="device-detail">أزرار لمس كبيرة + اهتزاز تفاعلي</div>
+        <div id="deviceModal" class="overlay-modal hidden">
+            <div class="device-card-modal">
+                <h2 class="device-heading">Choose Your Device</h2>
+                <div class="device-options-grid">
+                    <div class="device-option-box" data-device="phone">
+                        <div class="dev-icon">📱</div>
+                        <div class="dev-name">Phone</div>
                     </div>
-                    
-                    <div class="device-card" data-device="tablet">
-                        <div class="device-icon">📱</div>
-                        <div class="device-title">Tablet</div>
-                        <div class="device-detail">توزيع متوازن للشاشات المتوسطة</div>
+                    <div class="device-option-box" data-device="tablet">
+                        <div class="dev-icon">📱</div>
+                        <div class="dev-name">Tablet</div>
                     </div>
-
-                    <div class="device-card" data-device="ipad">
-                        <div class="device-icon">🖥️</div>
-                        <div class="device-title">iPad</div>
-                        <div class="device-detail">استغلال كامل للشاشات ذات المظهر 4:3</div>
+                    <div class="device-option-box" data-device="ipad">
+                        <div class="dev-icon">🖥️</div>
+                        <div class="dev-name">iPad</div>
                     </div>
-                    
-                    <div class="device-card selected" data-device="computer">
-                        <div class="device-icon">💻</div>
-                        <div class="device-title">Computer</div>
-                        <div class="device-detail">لوحة المفاتيح [A, D, Shift, E, Space]</div>
+                    <div class="device-option-box active-dev" data-device="computer">
+                        <div class="dev-icon">💻</div>
+                        <div class="dev-name">Computer</div>
                     </div>
                 </div>
-
-                <button id="btnConfirmDevice" class="primary-btn start-game-btn">دخول المستشفى ◄</button>
+                <button id="btnStartGame" class="main-action-btn">دخول المستشفى ◄</button>
             </div>
         </div>
 
-        <!-- واجهة المستخدم الرسومية أثناء اللعب (HUD Overlay) -->
-        <div id="inGameHUD" class="hud-container hidden">
-            <div class="hud-top-left">
-                <div class="heart-status-panel">
-                    <div class="heart-icon-wrapper">
-                        <span id="hudHeartBeatIcon" class="heart-beat-element">❤️</span>
-                    </div>
-                    <div class="heart-stats-data">
-                        <div class="stability-header">
-                            <span class="label">HEART STABILITY</span>
-                            <span id="stabilityPercentage" class="value">100%</span>
+        <div id="hudOverlay" class="hud-layer hidden">
+            <div class="hud-left">
+                <div class="heart-panel">
+                    <div id="heartIcon" class="heart-icon">❤️</div>
+                    <div class="heart-info">
+                        <div class="stability-row">
+                            <span class="st-label">STABILITY</span>
+                            <span id="txtStability" class="st-val">100%</span>
                         </div>
-                        <div class="stability-bar-track">
-                            <div id="stabilityBarFill" class="stability-bar-fill" style="width: 100%;"></div>
+                        <div class="st-bar-bg">
+                            <div id="stBarFill" class="st-bar-fill" style="width: 100%;"></div>
                         </div>
                     </div>
                 </div>
-                
-                <div class="bpm-counter-panel">
-                    <div class="bpm-label">BPM</div>
-                    <div id="bpmValueDisplay" class="bpm-value">72</div>
+                <div class="bpm-panel">
+                    <div class="bpm-title">BPM</div>
+                    <div id="txtBpm" class="bpm-num">72</div>
                 </div>
             </div>
 
-            <div class="hud-top-right">
-                <div class="ecg-live-box">
-                    <canvas id="hudEcgCanvas" width="160" height="45"></canvas>
-                </div>
-                <div id="criticalWarningBadge" class="critical-badge hidden">WARNING: UNSTABLE CORE</div>
+            <div class="hud-right">
+                <canvas id="hudEcgCanvas" width="150" height="40"></canvas>
             </div>
         </div>
 
-        <!-- نظام الحوار السينمائي والتفاعلي -->
-        <div id="dialogueBox" class="dialogue-box-wrapper hidden">
-            <div class="dialogue-avatar-container">
-                <canvas id="dialogueAvatarCanvas" width="64" height="64"></canvas>
+        <div id="dialogueBox" class="dialogue-box hidden">
+            <div id="dialogueSpeaker" class="speaker-title">DOCTOR</div>
+            <div id="dialogueText" class="speaker-body">...</div>
+            <div class="dialogue-hint">اضغط للمتابعة ◄</div>
+        </div>
+
+        <div id="touchControls" class="touch-layer hidden">
+            <div id="touchMoveZone" class="touch-zone left-zone">
+                <div id="joystickKnob" class="joystick-knob"></div>
             </div>
-            <div class="dialogue-text-container">
-                <div id="dialogueSpeakerName" class="speaker-name">DOCTOR</div>
-                <div id="dialogueTextBody" class="text-body">...</div>
-                <div id="dialogueContinueHint" class="continue-hint">اضغط [Space] أو انقر للمتابعة ◄</div>
+            <div id="touchLookZone" class="touch-zone right-zone"></div>
+            <div class="touch-actions">
+                <button id="btnTouchRun" class="touch-action-btn">🏃</button>
+                <button id="btnTouchInteract" class="touch-action-btn">✋</button>
             </div>
         </div>
 
-        <!-- عناصر التحكم باللمس للأجهزة المحمولة واللوحية -->
-        <div id="touchControlsLayer" class="touch-controls-container hidden">
-            <div class="touch-group-left">
-                <button id="btnTouchLeft" class="touch-control-btn dpad-btn">◄</button>
-                <button id="btnTouchRight" class="touch-control-btn dpad-btn">►</button>
-            </div>
-            <div class="touch-group-right">
-                <button id="btnTouchRun" class="touch-control-btn action-btn run-btn">🏃🏻‍♂️</button>
-                <button id="btnTouchInteract" class="touch-control-btn action-btn interact-btn">✋</button>
-            </div>
-        </div>
-
-        <!-- شاشة النهاية وملخص الأداء -->
         <div id="endingOverlay" class="overlay-modal hidden">
-            <div class="ending-box">
-                <h1 id="endingHeaderTitle" class="ending-main-title">...</h1>
-                <div id="endingSubTitle" class="ending-sub-title">...</div>
-                
-                <div class="ending-ecg-visualization">
-                    <canvas id="endingEcgGraph" width="400" height="100"></canvas>
+            <div class="ending-card">
+                <h1 id="endingTitle" class="ending-title">...</h1>
+                <div class="ending-ecg-box">
+                    <canvas id="endingEcgCanvas" width="350" height="80"></canvas>
                 </div>
-
-                <p id="endingStorySummary" class="ending-text-summary">...</p>
-                
-                <div class="game-stats-grid">
-                    <div class="stat-item">
-                        <span class="stat-label">أعلى معدل نبض:</span>
-                        <span id="statMaxBpm" class="stat-value">0 BPM</span>
-                    </div>
-                    <div class="stat-item">
-                        <span class="stat-label">الوقت المنقضي:</span>
-                        <span id="statTimeSurvived" class="stat-value">00:00</span>
-                    </div>
-                    <div class="stat-item">
-                        <span class="stat-label">أدنى استقرار للقلب:</span>
-                        <span id="statMinStability" class="stat-value">0%</span>
-                    </div>
-                </div>
-
-                <button id="btnRestartGame" class="primary-btn restart-game-btn">إعادة التجربة</button>
+                <p id="endingStory" class="ending-desc">...</p>
+                <button id="btnRestart" class="main-action-btn">إعادة التجربة</button>
             </div>
         </div>
 
@@ -181,4 +130,4 @@
 
     <script src="game.js"></script>
 </body>
-              </html>
+</html>
