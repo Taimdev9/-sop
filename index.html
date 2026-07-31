@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, orientation=landscape">
-    <title>LAST BEAT 3D</title>
+    <title>LAST BEAT - 3D Horror Experience</title>
     <link rel="stylesheet" href="style.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
@@ -17,17 +17,72 @@
             <div id="vignetteCritical" class="vignette-critical hidden"></div>
             <div id="crtOverlay" class="crt-overlay-layer"></div>
             <div id="screenFlash" class="flash-layer"></div>
+            <div id="anesthesiaOverlay" class="anesthesia-layer hidden"></div>
             <div id="blurOverlay" class="blur-layer hidden"></div>
+            <div id="memoryFlashOverlay" class="memory-flash-layer hidden">
+                <div id="memoryText" class="memory-text-display">...</div>
+            </div>
         </div>
 
         <div id="crosshair" class="crosshair-dot hidden"></div>
 
-        <div id="audioInitModal" class="overlay-modal active">
-            <div class="modal-card">
-                <div class="icon-pulse">🎧</div>
-                <h2 class="card-title">تجربة صوتية ورعب نفسي 3D</h2>
-                <p class="card-desc">استخدم السماعات للحصول على مجسم صووتي كامل ونبض حقيقي.</p>
-                <button id="btnInitAudio" class="main-action-btn">بدء التجربة</button>
+        <div id="mainMenu" class="overlay-modal active">
+            <div class="menu-container">
+                <div class="menu-brand">
+                    <div class="team-tag">TRL TEAM FOR DEVELOPMENT</div>
+                    <h1 class="game-logo-3d">LAST BEAT</h1>
+                    <div class="game-subtitle-ar">آخر نبضة</div>
+                </div>
+
+                <div class="menu-nav-buttons">
+                    <button id="btnMenuStart" class="menu-btn primary">START GAME</button>
+                    <button id="btnMenuSettings" class="menu-btn">SETTINGS</button>
+                    <button id="btnMenuDevs" class="menu-btn">DEVELOPERS</button>
+                    <button id="btnMenuExit" class="menu-btn danger">EXIT</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="developersModal" class="overlay-modal hidden">
+            <div class="modal-card dev-card">
+                <h2 class="card-title-green">DEVELOPERS</h2>
+                <div class="dev-info-body">
+                    <div class="dev-role">Developed by:</div>
+                    <div class="dev-team-name">TRL TEAM FOR DEVELOPMENT</div>
+                    <div class="dev-divider"></div>
+                    <div class="dev-role">Game Creator:</div>
+                    <div class="dev-author-name">TAIM</div>
+                </div>
+                <button id="btnCloseDevs" class="main-action-btn">رجوع ◄</button>
+            </div>
+        </div>
+
+        <div id="settingsModal" class="overlay-modal hidden">
+            <div class="modal-card settings-card">
+                <h2 class="card-title-green">SETTINGS</h2>
+                <div class="settings-grid">
+                    <div class="setting-row">
+                        <label>صوت اللعبة العام</label>
+                        <input type="range" id="sliderMasterVol" min="0" max="100" value="80">
+                    </div>
+                    <div class="setting-row">
+                        <label>الموسيقى المحيطية</label>
+                        <input type="range" id="sliderMusicVol" min="0" max="100" value="70">
+                    </div>
+                    <div class="setting-row">
+                        <label>صوت نبض القلب</label>
+                        <input type="range" id="sliderHeartVol" min="0" max="100" value="100">
+                    </div>
+                    <div class="setting-row">
+                        <label>الاهتزاز (Vibration)</label>
+                        <input type="checkbox" id="chkVibration" checked>
+                    </div>
+                    <div class="setting-row">
+                        <label>ملء الشاشة (Fullscreen)</label>
+                        <button id="btnToggleFullscreen" class="small-opt-btn">تفعيل</button>
+                    </div>
+                </div>
+                <button id="btnCloseSettings" class="main-action-btn">حفظ ورجوع ◄</button>
             </div>
         </div>
 
@@ -44,7 +99,7 @@
                     </svg>
                 </div>
                 
-                <div id="loadStatusText" class="status-msg">جاري تجهيز مستشفى 2089...</div>
+                <div id="loadStatusText" class="status-msg">جاري تجهيز العملية الجراحية...</div>
             </div>
         </div>
 
@@ -69,7 +124,7 @@
                         <div class="dev-name">Computer</div>
                     </div>
                 </div>
-                <button id="btnStartGame" class="main-action-btn">دخول المستشفى ◄</button>
+                <button id="btnStartGame" class="main-action-btn">بدء العملية ◄</button>
             </div>
         </div>
 
@@ -101,7 +156,8 @@
         <div id="dialogueBox" class="dialogue-box hidden">
             <div id="dialogueSpeaker" class="speaker-title">DOCTOR</div>
             <div id="dialogueText" class="speaker-body">...</div>
-            <div class="dialogue-hint">اضغط للمتابعة ◄</div>
+            <div id="dialogueChoicesContainer" class="dialogue-choices-grid hidden"></div>
+            <div id="dialogueHint" class="dialogue-hint">اضغط للمتابعة ◄</div>
         </div>
 
         <div id="touchControls" class="touch-layer hidden">
