@@ -2,6 +2,11 @@
     'use strict';
 
     window.GameAssets = {
+        audioHooks: {
+            doctorVoice: 'assets/sounds/doctor.mp3',
+            playerVoice: 'assets/sounds/player.mp3',
+            radioVoice: 'assets/sounds/radio.mp3'
+        },
         createNoiseTexture: function () {
             const canvas = document.createElement('canvas');
             canvas.width = 128;
