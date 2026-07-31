@@ -17,14 +17,23 @@
             <div id="vignetteCritical" class="vignette-critical hidden"></div>
             <div id="crtOverlay" class="crt-overlay-layer"></div>
             <div id="screenFlash" class="flash-layer"></div>
-            <div id="anesthesiaOverlay" class="anesthesia-layer hidden"></div>
+            <div id="anesthesiaOverlay" class="anesthesia-layer hidden">
+                <div id="anesthesiaCountdown" class="anesthesia-countdown-text"></div>
+            </div>
             <div id="blurOverlay" class="blur-layer hidden"></div>
+            <div id="worldCollapseOverlay" class="collapse-layer hidden"></div>
             <div id="memoryFlashOverlay" class="memory-flash-layer hidden">
+                <div id="memoryTitle" class="memory-title">ذكريات...</div>
                 <div id="memoryText" class="memory-text-display">...</div>
             </div>
         </div>
 
         <div id="crosshair" class="crosshair-dot hidden"></div>
+
+        <div id="movementIndicator" class="movement-hud-indicator hidden">
+            <div id="moveStatusDot" class="move-dot"></div>
+            <span id="moveStatusText">WALKING</span>
+        </div>
 
         <div id="mainMenu" class="overlay-modal active">
             <div class="menu-container">
@@ -99,7 +108,7 @@
                     </svg>
                 </div>
                 
-                <div id="loadStatusText" class="status-msg">جاري تجهيز العملية الجراحية...</div>
+                <div id="loadStatusText" class="status-msg">جاري تحميل الرحلة الحيوية...</div>
             </div>
         </div>
 
@@ -124,7 +133,7 @@
                         <div class="dev-name">Computer</div>
                     </div>
                 </div>
-                <button id="btnStartGame" class="main-action-btn">بدء العملية ◄</button>
+                <button id="btnStartGame" class="main-action-btn">دخول المستشفى ◄</button>
             </div>
         </div>
 
@@ -146,6 +155,7 @@
                     <div class="bpm-title">BPM</div>
                     <div id="txtBpm" class="bpm-num">72</div>
                 </div>
+                <div id="actIndicator" class="act-indicator-badge">ACT I: THE HOSPITAL</div>
             </div>
 
             <div class="hud-right">
