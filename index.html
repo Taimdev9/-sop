@@ -7,6 +7,8 @@
     <link rel="stylesheet" href="style.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="assets/assets.js"></script>
+    <script src="js/audio.js"></script>
+    <script src="js/world.js"></script>
 </head>
 <body>
 
@@ -31,6 +33,10 @@
 
         <div id="crosshair" class="crosshair-dot hidden"></div>
 
+        <div id="interactPrompt" class="interact-prompt-badge hidden">
+            <span id="interactPromptText">اضغط [E] للتفاعل</span>
+        </div>
+
         <div id="movementIndicator" class="movement-hud-indicator hidden">
             <div id="moveStatusDot" class="move-dot"></div>
             <span id="moveStatusText" data-i18n="walking">جاري المشي</span>
@@ -42,7 +48,7 @@
                     <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="#ff1e43" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
                 </div>
                 <h2 class="warning-title" data-i18n="warningTitle">تحذير محتوى وشروط اللعب</h2>
-                <p class="warning-desc" data-i18n="warningDesc">تحتوي هذه اللعبة على مشاهد رعب نفسي، أصوات مفاجئة (Jump Scares)، وتأثيرات ضوئية قد لا تناسب لبعض اللاعبين أو من يعانون من حساسية الضوء. بمتابعة اللعب، فإنك توافق على ذلك.</p>
+                <p class="warning-desc" data-i18n="warningDesc">تحتوي هذه اللعبة على مشاهد رعب نفسي، أصوات مفاجئة (Jump Scares)، وتأثيرات ضوئية قد لا تناسب بعض اللاعبين. بمتابعة اللعب فإنك توافق على ذلك.</p>
                 <button id="btnWarningAgree" class="main-action-btn" data-i18n="agreeContinue">موافق ومتابعة ◄</button>
             </div>
         </div>
@@ -125,7 +131,7 @@
                     </svg>
                 </div>
                 
-                <div id="loadStatusText" class="status-msg" data-i18n="loadingBio">جاري تحميل الرحلة الحيوية...</div>
+                <div id="loadStatusText" class="status-msg" data-i18n="loadingBio">جاري تحميل العالم ثلاثي الأبعاد...</div>
             </div>
         </div>
 
@@ -183,6 +189,10 @@
                     <div id="txtBpm" class="bpm-num">72</div>
                 </div>
                 <div id="actIndicator" class="act-indicator-badge">ACT 0: HOME</div>
+                <div id="keycardBadge" class="keycard-badge hidden">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="#00ff66"><path d="M20 4H4c-1.11 0-1.99.89-1.99 2L2 18c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V6c0-1.11-.89-2-2-2zm0 14H4v-6h16v6zm0-10H4V6h16v2z"/></svg>
+                    <span>KEYCARD</span>
+                </div>
             </div>
 
             <div class="hud-right">
@@ -225,6 +235,6 @@
 
     </div>
 
-    <script src="game.js"></script>
+    <script src="js/game.js"></script>
 </body>
 </html>
