@@ -3,16 +3,17 @@
 
     const STATE = {
         INIT: 0,
-        MENU: 1,
-        SETTINGS: 2,
-        DEVELOPERS: 3,
-        LOADING: 4,
-        DEVICE_SELECT: 5,
-        PROLOGUE: 6,
-        PLAYING: 7,
-        DIALOGUE: 8,
-        CRITICAL: 9,
-        ENDING: 10
+        WARNING: 1,
+        MENU: 2,
+        SETTINGS: 3,
+        DEVELOPERS: 4,
+        LOADING: 5,
+        DEVICE_SELECT: 6,
+        PROLOGUE: 7,
+        PLAYING: 8,
+        DIALOGUE: 9,
+        CRITICAL: 10,
+        ENDING: 11
     };
 
     const CONFIG = {
@@ -28,7 +29,73 @@
         ACT3_LENGTH: 450
     };
 
+    const I18N = {
+        ar: {
+            walking: "جاري المشي",
+            running: "جاري الركض",
+            warningTitle: "تحذير محتوى وشروط اللعب",
+            warningDesc: "تحتوي هذه اللعبة على مشاهد رعب نفسي، أصوات مفاجئة (Jump Scares)، وتأثيرات ضوئية قد لا تناسب لبعض اللاعبين. بمتابعة اللعب، فإنك توافق على ذلك.",
+            agreeContinue: "موافق ومتابعة ◄",
+            gameSubtitle: "آخر نبضة",
+            btnPlay: "بدء اللعب",
+            btnContinue: "متابعة",
+            btnSettings: "الإعدادات",
+            btnCredits: "المطورون",
+            btnExit: "خروج",
+            devsTitle: "المطورون",
+            devsBy: "تطوير بواسطة:",
+            devsCreator: "منشئ اللعبة:",
+            btnBack: "رجوع ◄",
+            settingsTitle: "الإعدادات",
+            langLabel: "اللغة (Language)",
+            masterVol: "صوت اللعبة العام",
+            musicVol: "الموسيقى المحيطية",
+            heartVol: "صوت نبض القلب",
+            vibration: "الاهتزاز (Vibration)",
+            fullscreen: "ملء الشاشة (Fullscreen)",
+            btnEnable: "تفعيل",
+            btnSaveBack: "حفظ ورجوع ◄",
+            loadingBio: "جاري تحميل الرحلة الحيوية...",
+            chooseDevice: "اختر نوع جهازك",
+            enterGame: "دخول المستشفى ◄",
+            pressContinue: "اضغط للمتابعة ◄",
+            btnRestart: "إعادة التجربة"
+        },
+        en: {
+            walking: "WALKING",
+            running: "RUNNING",
+            warningTitle: "CONTENT WARNING",
+            warningDesc: "This game contains psychological horror, sudden sounds (Jump Scares), and flashing light effects. By playing, you agree to these conditions.",
+            agreeContinue: "AGREE & CONTINUE ◄",
+            gameSubtitle: "LAST BEAT",
+            btnPlay: "PLAY",
+            btnContinue: "CONTINUE",
+            btnSettings: "SETTINGS",
+            btnCredits: "CREDITS",
+            btnExit: "EXIT",
+            devsTitle: "CREDITS",
+            devsBy: "Developed by:",
+            devsCreator: "Game Creator:",
+            btnBack: "BACK ◄",
+            settingsTitle: "SETTINGS",
+            langLabel: "Language",
+            masterVol: "Master Volume",
+            musicVol: "Music Volume",
+            heartVol: "Heartbeat Volume",
+            vibration: "Vibration",
+            fullscreen: "Fullscreen",
+            btnEnable: "Enable",
+            btnSaveBack: "SAVE & BACK ◄",
+            loadingBio: "Loading Bio Engine...",
+            chooseDevice: "CHOOSE YOUR DEVICE",
+            enterGame: "ENTER HOSPITAL ◄",
+            pressContinue: "PRESS TO CONTINUE ◄",
+            btnRestart: "RESTART EXPERIENCE"
+        }
+    };
+
     const settings = {
+        lang: 'ar',
         masterVol: 0.8,
         musicVol: 0.7,
         heartVol: 1.0,
@@ -110,6 +177,26 @@
         resetAudioEffect() {
             if (!this.ctx) return;
             this.lowpassFilter.frequency.setValueAtTime(20000, this.ctx.currentTime);
+        }
+
+        playUIClick() {
+            if (!this.unlocked || !this.ctx) return;
+            const now = this.ctx.currentTime;
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(800, now);
+            osc.frequency.exponentialRampToValueAtTime(400, now + 0.03);
+
+            gain.gain.setValueAtTime(0.15, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.03);
+
+            osc.connect(gain);
+            gain.connect(this.masterGain);
+
+            osc.start(now);
+            osc.stop(now + 0.04);
         }
 
         playHeartbeat(intensity) {
@@ -261,13 +348,6 @@
 
             osc.start(now);
             osc.stop(now + 0.05);
-        }
-
-        playCustomVoice(audioPath) {
-            if (!this.unlocked) return;
-            const audioObj = new Audio(audioPath);
-            audioObj.volume = settings.masterVol;
-            audioObj.play().catch(() => {});
         }
     }
 
@@ -787,6 +867,7 @@
                     btn.className = 'choice-btn';
                     btn.textContent = ch.text;
                     btn.addEventListener('click', () => {
+                        audio.playUIClick();
                         game.dom.dialogueChoices.classList.add('hidden');
                         this.showPrologueStep(ch.nextPhase);
                     });
@@ -862,6 +943,26 @@
 
     let world, controller, dialogueEngine;
 
+    function applyI18N(lang) {
+        settings.lang = lang;
+        const dict = I18N[lang] || I18N.ar;
+
+        document.querySelectorAll('[data-i18n]').forEach(el => {
+            const key = el.dataset.i18n;
+            if (dict[key]) {
+                el.textContent = dict[key];
+            }
+        });
+
+        if (lang === 'en') {
+            game.dom.viewport.classList.remove('lang-ar');
+            game.dom.viewport.classList.add('lang-en');
+        } else {
+            game.dom.viewport.classList.remove('lang-en');
+            game.dom.viewport.classList.add('lang-ar');
+        }
+    }
+
     function triggerMemoryFlash(title, msgText) {
         game.dom.memoryTitle.textContent = title;
         game.dom.memoryText.textContent = msgText;
@@ -882,9 +983,11 @@
         const isMoving = controller.update();
         world.update(controller.position, isMoving);
 
+        const dict = I18N[settings.lang] || I18N.ar;
+
         if (isMoving) {
             game.dom.movementIndicator.classList.remove('hidden');
-            game.dom.moveStatusText.textContent = game.isRunning ? 'RUNNING' : 'WALKING';
+            game.dom.moveStatusText.textContent = game.isRunning ? dict.running : dict.walking;
             game.dom.moveStatusDot.style.background = game.isRunning ? '#ff1e43' : '#00ff66';
         } else {
             game.dom.movementIndicator.classList.add('hidden');
@@ -1009,11 +1112,11 @@
         game.dom.hudOverlay.classList.add('hidden');
 
         if (isGood) {
-            game.dom.endingTitle.textContent = "استقرار النبض والعودة للحياة";
-            game.dom.endingStory.textContent = "وصلت لنواة قلبك الحقيقي واستجمعت إرادتك للحياة... في غرفة العمليات نجحت الصدمات الكهربائية واستقرت دقات قلبك الذكي الجديد برعايتها للأطباء. تم الاستيقاظ بنجاح.";
+            game.dom.endingTitle.textContent = settings.lang === 'en' ? "STABLE PULSE - RETURN TO LIFE" : "استقرار النبض والعودة للحياة";
+            game.dom.endingStory.textContent = settings.lang === 'en' ? "You reached your true heart core and held onto the will to live. Electrophysiology shock succeeded and your new smart heart stabilized under doctor care." : "وصلت لنواة قلبك الحقيقي واستجمعت إرادتك للحياة... في غرفة العمليات نجحت الصدمات الكهربائية واستقرت دقات قلبك الذكي الجديد برعايتها للأطباء. تم الاستيقاظ بنجاح.";
         } else {
-            game.dom.endingTitle.textContent = "توقف القلب والانهيار";
-            game.dom.endingStory.textContent = "توقف استقرار قلبك تماماً أثناء المعركة النفسية... تحول مؤشر شاشة ECG في غرفة العمليات لخط مستقيم صامت ينعى نهاية الرحلة.";
+            game.dom.endingTitle.textContent = settings.lang === 'en' ? "HEART FAILURE" : "توقف القلب والانهيار";
+            game.dom.endingStory.textContent = settings.lang === 'en' ? "Your heart stability completely failed during the psychological struggle. The ECG line flatlined silently in the operating room." : "توقف استقرار قلبك تماماً أثناء المعركة النفسية... تحول مؤشر شاشة ECG في غرفة العمليات لخط مستقيم صامت ينعى نهاية الرحلة.";
         }
     }
 
@@ -1025,8 +1128,11 @@
     function initUI() {
         game.dom = {
             viewport: document.getElementById('gameViewport'),
+            warningModal: document.getElementById('warningModal'),
+            btnWarningAgree: document.getElementById('btnWarningAgree'),
             mainMenu: document.getElementById('mainMenu'),
-            btnMenuStart: document.getElementById('btnMenuStart'),
+            btnMenuPlay: document.getElementById('btnMenuPlay'),
+            btnMenuContinue: document.getElementById('btnMenuContinue'),
             btnMenuSettings: document.getElementById('btnMenuSettings'),
             btnMenuDevs: document.getElementById('btnMenuDevs'),
             btnMenuExit: document.getElementById('btnMenuExit'),
@@ -1034,6 +1140,7 @@
             btnCloseDevs: document.getElementById('btnCloseDevs'),
             settingsModal: document.getElementById('settingsModal'),
             btnCloseSettings: document.getElementById('btnCloseSettings'),
+            btnToggleLang: document.getElementById('btnToggleLang'),
             sliderMasterVol: document.getElementById('sliderMasterVol'),
             sliderMusicVol: document.getElementById('sliderMusicVol'),
             sliderHeartVol: document.getElementById('sliderHeartVol'),
@@ -1073,34 +1180,54 @@
 
         game.hudEcgCtx = document.getElementById('hudEcgCanvas').getContext('2d');
 
-        game.dom.btnMenuStart.addEventListener('click', () => {
+        game.dom.btnWarningAgree.addEventListener('click', () => {
             audio.init();
+            audio.playUIClick();
+            game.dom.warningModal.classList.add('hidden');
+            game.dom.mainMenu.classList.remove('hidden');
+            game.state = STATE.MENU;
+        });
+
+        game.dom.btnMenuPlay.addEventListener('click', () => {
+            audio.playUIClick();
             audio.startAmbient();
             game.dom.mainMenu.classList.add('hidden');
             game.dom.deviceModal.classList.remove('hidden');
+            game.state = STATE.DEVICE_SELECT;
         });
 
         game.dom.btnMenuSettings.addEventListener('click', () => {
+            audio.playUIClick();
             game.dom.mainMenu.classList.add('hidden');
             game.dom.settingsModal.classList.remove('hidden');
         });
 
         game.dom.btnCloseSettings.addEventListener('click', () => {
+            audio.playUIClick();
             game.dom.settingsModal.classList.add('hidden');
             game.dom.mainMenu.classList.remove('hidden');
         });
 
+        game.dom.btnToggleLang.addEventListener('click', () => {
+            audio.playUIClick();
+            const newLang = settings.lang === 'ar' ? 'en' : 'ar';
+            applyI18N(newLang);
+        });
+
         game.dom.btnMenuDevs.addEventListener('click', () => {
+            audio.playUIClick();
             game.dom.mainMenu.classList.add('hidden');
             game.dom.developersModal.classList.remove('hidden');
         });
 
         game.dom.btnCloseDevs.addEventListener('click', () => {
+            audio.playUIClick();
             game.dom.developersModal.classList.add('hidden');
             game.dom.mainMenu.classList.remove('hidden');
         });
 
         game.dom.btnMenuExit.addEventListener('click', () => {
+            audio.playUIClick();
             window.close();
         });
 
@@ -1124,6 +1251,7 @@
         });
 
         game.dom.btnToggleFullscreen.addEventListener('click', () => {
+            audio.playUIClick();
             if (!document.fullscreenElement) {
                 document.documentElement.requestFullscreen();
             } else {
@@ -1133,6 +1261,7 @@
 
         document.querySelectorAll('.device-option-box').forEach(box => {
             box.addEventListener('click', () => {
+                audio.playUIClick();
                 document.querySelectorAll('.device-option-box').forEach(b => b.classList.remove('active-dev'));
                 box.classList.add('active-dev');
                 game.selectedDevice = box.dataset.device;
@@ -1140,8 +1269,9 @@
         });
 
         game.dom.btnStartGame.addEventListener('click', () => {
+            audio.playUIClick();
             game.dom.deviceModal.classList.add('hidden');
-            game.dom.viewport.className = `device-${game.selectedDevice}`;
+            game.dom.viewport.className = `device-${game.selectedDevice} lang-${settings.lang}`;
 
             if (game.selectedDevice !== 'computer') {
                 game.dom.touchControls.classList.remove('hidden');
@@ -1167,8 +1297,11 @@
         });
 
         game.dom.btnRestart.addEventListener('click', () => {
+            audio.playUIClick();
             window.location.reload();
         });
+
+        applyI18N('ar');
     }
 
     window.addEventListener('DOMContentLoaded', initUI);
