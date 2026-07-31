@@ -94,29 +94,68 @@ html, body {
     position: absolute;
     width: 100%;
     height: 100%;
-    background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, rgba(0,0,0,0.95) 100%);
-    backdrop-filter: blur(8px);
+    background: radial-gradient(circle, rgba(255,255,255,0.15) 0%, rgba(0,0,0,0.98) 100%);
+    backdrop-filter: blur(12px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
     transition: opacity 2s ease;
+}
+
+.anesthesia-countdown-text {
+    font-size: 5rem;
+    color: #ff1e43;
+    font-weight: 900;
+    letter-spacing: 10px;
+    text-shadow: 0 0 30px rgba(255, 30, 67, 0.8);
+    animation: zoomCountdown 1s infinite linear;
+}
+
+@keyframes zoomCountdown {
+    0% { transform: scale(0.8); opacity: 0.5; }
+    50% { transform: scale(1.3); opacity: 1; }
+    100% { transform: scale(1); opacity: 0; }
 }
 
 .blur-layer {
     position: absolute;
     width: 100%;
     height: 100%;
-    backdrop-filter: blur(4px);
+    backdrop-filter: blur(5px);
     transition: backdrop-filter 0.5s ease;
+}
+
+.collapse-layer {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    background: radial-gradient(circle, transparent 40%, rgba(255, 0, 0, 0.4) 100%);
+    animation: collapseFlicker 0.2s infinite alternate;
+}
+
+@keyframes collapseFlicker {
+    0% { opacity: 0.4; }
+    100% { opacity: 0.9; }
 }
 
 .memory-flash-layer {
     position: absolute;
     width: 100%;
     height: 100%;
-    background: rgba(0, 0, 0, 0.85);
+    background: rgba(0, 0, 0, 0.88);
     display: flex;
+    flex-direction: column;
     justify-content: center;
     align-items: center;
     z-index: 12;
     transition: opacity 0.8s ease;
+}
+
+.memory-title {
+    color: #718096;
+    font-size: 0.9rem;
+    letter-spacing: 4px;
+    margin-bottom: 12px;
 }
 
 .memory-text-display {
@@ -125,7 +164,38 @@ html, body {
     text-align: center;
     max-width: 80%;
     line-height: 1.6;
-    text-shadow: 0 0 12px rgba(0, 255, 102, 0.6);
+    text-shadow: 0 0 15px rgba(0, 255, 102, 0.6);
+}
+
+.movement-hud-indicator {
+    position: absolute;
+    bottom: 25px;
+    left: 25px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(11, 13, 18, 0.75);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 6px 14px;
+    border-radius: 20px;
+    z-index: 25;
+    pointer-events: none;
+    font-size: 0.7rem;
+    color: #00ff66;
+    letter-spacing: 2px;
+}
+
+.move-dot {
+    width: 8px;
+    height: 8px;
+    background: #00ff66;
+    border-radius: 50%;
+    animation: movePulse 0.4s infinite alternate;
+}
+
+@keyframes movePulse {
+    0% { transform: scale(0.8); opacity: 0.4; }
+    100% { transform: scale(1.3); opacity: 1; }
 }
 
 .crosshair-dot {
@@ -487,6 +557,16 @@ html, body {
 
 .bpm-title { font-size: 0.55rem; color: #718096; }
 .bpm-num { font-size: 1.1rem; font-weight: bold; color: #00ff66; }
+
+.act-indicator-badge {
+    background: rgba(0, 255, 102, 0.1);
+    border: 1px solid rgba(0, 255, 102, 0.4);
+    color: #00ff66;
+    font-size: 0.65rem;
+    padding: 6px 12px;
+    border-radius: 4px;
+    letter-spacing: 2px;
+}
 
 .hud-right {
     background: rgba(11, 13, 18, 0.85);
